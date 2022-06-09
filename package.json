@@ -1,0 +1,28 @@
+{
+  "name": "thrift-fmt",
+  "version": "0.0.1",
+  "description": "A thrift formatter, implement of python thrift-fmt",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo hello"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thrift-labs/thrift-fmt-ts.git"
+  },
+  "keywords": [
+    "Thrift",
+    "Formatter",
+    "Thrift-fmt",
+    "Pretty"
+  ],
+  "author": "alingse",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/thrift-labs/thrift-fmt-ts/issues"
+  },
+  "homepage": "https://github.com/thrift-labs/thrift-fmt-ts#readme",
+  "devDependencies": {
+    "typescript": "^4.7.3"
+  }
+}
