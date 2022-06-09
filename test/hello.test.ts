@@ -1,3 +1,9 @@
+import 'jest';
+
 import { hello } from '../src/index'
 
-hello() === ""
+describe('status integration tests', () => {
+    it('should return hello world', () => {
+        expect(hello()).toBe('hello world');
+    })
+});
