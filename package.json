@@ -4,7 +4,7 @@
   "description": "A thrift formatter, implement of python thrift-fmt",
   "main": "./lib/src/index.js",
   "files": [
-    "lib/**/*"
+    "lib/src/*"
   ],
   "scripts": {
     "build": "tsc",
@@ -37,5 +37,14 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "jest": {
+    "verbose": true,
+    "preset": "ts-jest",
+    "roots": [
+        "<rootDir>/src",
+        "<rootDir>/test"
+    ],
+    "testEnvironment": "node"
   }
 }
