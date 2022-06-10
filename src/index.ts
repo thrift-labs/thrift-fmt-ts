@@ -1,5 +1,7 @@
-import { ThriftData, ThriftParser } from 'thirft-parser-ts';
 import { ParseTree, TerminalNode } from 'antlr4ts/tree';
+import { ThriftData, ThriftParser } from 'thirft-parser-ts';
+import ThriftParserNamespace from 'thirft-parser-ts/lib/ThriftParser';
+
 
 export function hello(): ThriftData {
     return ThriftData.from_string('include "shared.thrift"');
@@ -89,22 +91,24 @@ export class PureThriftFormatter {
         return node instanceof TerminalNode && node.symbol.text === text;
     }
 
+    static _is_newline_node(node: ParseTree): boolean {
+        return node instanceof ThriftParserNamespace.Enum_ruleContext
+        || node instanceof ThriftParserNamespace.Struct_Context
+        || node instanceof ThriftParserNamespace.Union_Context
+        || node instanceof ThriftParserNamespace.Exception_Context
+        || node instanceof ThriftParserNamespace.ServiceContext
+    }
+
+    after_block_node_hook(_: ParseTree) {}
+
+    before_block_node_hook(_: ParseTree) {}
+
+    _block_nodes(nodes: ParseTree[], indent: string = '') {
+        let last_node = undefined;
+    }
 }
 
 /*
-    @staticmethod
-    def _is_newline_node(node: ParseTree):
-        return isinstance(node, (
-            ThriftParser.Enum_ruleContext,
-            ThriftParser.Struct_Context,
-            ThriftParser.Union_Context,
-            ThriftParser.ExceptionContext,
-            ThriftParser.ServiceContext,
-        ))
-
-    def after_block_node_hook(self, _: ParseTree):
-        pass
-
     def _block_nodes(self, nodes: List[ParseTree], indent: str = ''):
         last_node = None
         for i, node in enumerate(nodes):
