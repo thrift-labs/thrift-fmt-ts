@@ -43,9 +43,12 @@
     "verbose": true,
     "preset": "ts-jest",
     "roots": [
-        "<rootDir>/src",
-        "<rootDir>/test"
+      "<rootDir>/src",
+      "<rootDir>/test"
     ],
     "testEnvironment": "node"
+  },
+  "dependencies": {
+    "thrift-parser-antlr4": "^0.0.3"
   }
 }
