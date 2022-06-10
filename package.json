@@ -49,6 +49,8 @@
     "testEnvironment": "node"
   },
   "dependencies": {
+    "@types/antlr4": "^4.7.2",
+    "thirft-parser-ts": "^1.0.0",
     "thrift-parser-antlr4": "^0.0.3"
   }
 }
