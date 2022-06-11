@@ -625,7 +625,6 @@ export class ThriftFormatter extends PureThriftFormatter {
         token.type == ThriftParser.SL_COMMENT ||
         PureThriftFormatter._is_EOF(node) ||
         (0 < node.symbol.line - last_line && node.symbol.line - last_line <= 1);
-      // console.log(token.line, last_line, is_tight);
       if (is_tight) {
         this._newline();
       } else {
