@@ -4,11 +4,11 @@
     "target": "ESNEXT",
     "module": "commonjs",
     "declaration": true,
-    "outDir": "./lib",
+    "outDir": "./lib/",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/*.ts", "test/*.ts"]
+  "include": ["src/*.ts", "test/**/*.ts"],
 }
