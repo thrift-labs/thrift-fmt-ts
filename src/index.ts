@@ -340,10 +340,7 @@ export class PureThriftFormatter {
     }
   }
 
-  TerminalNode: NodeProcessFunc = function (
-    this: PureThriftFormatter,
-    n: ParseTree
-  ) {
+  TerminalNode( n: ParseTree) {
     const node = <TerminalNode>n;
 
     if (PureThriftFormatter._is_EOF(node)) {
@@ -667,24 +664,14 @@ export class ThriftFormatter extends PureThriftFormatter {
         }
     }
 
-    // TODO: fix me
-    TerminalNode: NodeProcessFunc = function(this: PureThriftFormatter, node: ParseTree) {
-        // this._line_comments(node);
-        //this.super.TerminalNode(node);
-        // super.TerminalNode(node);
+    TerminalNode(n: ParseTree) {
+        const node = <TerminalNode> n;
+
+        if (this._newline_c > 0) {
+            this._tail_comment();
+        }
+
+        this._line_comments(node);
+        super.TerminalNode(node);
     }
 }
-/*
-
-    def TerminalNodeImpl(self, node: TerminalNodeImpl):
-        assert isinstance(node, TerminalNodeImpl)
-
-        # add tail comment before a new line
-        if self._newline_c > 0:
-            self._tail_comment()
-
-        # add abrove comments
-        self._line_comments(node)
-
-        super().TerminalNodeImpl(node)
-*/
