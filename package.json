@@ -3,15 +3,15 @@
   "type": "module",
   "version": "0.0.1",
   "description": "A thrift formatter, implement of python thrift-fmt",
-  "main": "/src/index.ts",
+  "main": "src/index.js",
   "files": [
-    "lib/src/*",
-    "src/*"
+    "src/*.ts",
+    "lib"
   ],
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf ./lib/",
-    "test": "mocha -r ts-node/register 'test/*.ts'",
+    "test": "mocha test/*.ts",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -44,9 +44,11 @@
   "publishConfig": {
     "access": "public"
   },
+  "mocha": {
+    "extensions": ["ts"]
+  },
   "dependencies": {
     "@types/antlr4": "^4.7.2",
-    "thirft-parser-ts": "^1.0.0",
-    "thrift-parser-antlr4": "^0.0.3"
+    "thirft-parser-ts": "^1.0.0"
   }
 }

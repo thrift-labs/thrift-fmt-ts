@@ -1,4 +1,5 @@
 import 'mocha';
+import assert  from 'assert';
 
 import { ThriftData } from 'thirft-parser-ts';
 import { PureThriftFormatter } from '../src/index'
