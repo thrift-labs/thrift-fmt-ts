@@ -43,3 +43,14 @@ struct Work {
         assert.equal(thrift, expectThrift);
     })
 });
+
+describe('test ThriftData', () => {
+    it('load invalid thrift', () => {
+        const rawThrift = `include    "shared.thrift`;
+        try {
+            const data = ThriftData.from_string(rawThrift);
+        } catch (error) {
+            assert.ok(error);
+        }
+    })
+});
