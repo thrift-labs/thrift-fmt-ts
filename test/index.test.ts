@@ -10,6 +10,6 @@ describe('status integration tests', () => {
         const data = ThriftData.from_string(rawThrift);
         const fmt = new PureThriftFormatter();
         const thrift = fmt.format_node(data.document);
-        // expect(thrift).toBe('hello world');
+        assert.equal(thrift, 'include "shared.thrift"');
     })
 });
