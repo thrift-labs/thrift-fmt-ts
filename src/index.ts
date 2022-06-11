@@ -128,7 +128,7 @@ export class PureThriftFormatter {
       }
       if (index > 0) {
         if (
-          typeof last_node === typeof node ||
+          typeof last_node !== typeof node ||
           PureThriftFormatter._is_newline_node(node)
         ) {
           this._newline(2);
@@ -465,7 +465,7 @@ export class PureThriftFormatter {
 
     this._gen_inline_Context2(
         node,
-        "",
+        " ",
         tight_fn,
     )
   }
@@ -708,7 +708,7 @@ export class ThriftFormatter extends PureThriftFormatter {
       }
       this._append(" ");
       this._append(comment.text!.trim());
-      this._push(" ");
+      this._push("");
       this._last_token_index = comment.tokenIndex;
     }
   }
