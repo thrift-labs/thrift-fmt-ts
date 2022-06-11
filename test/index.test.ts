@@ -4,8 +4,8 @@ import assert  from 'assert';
 import { ThriftData } from 'thirft-parser-ts';
 import { PureThriftFormatter, ThriftFormatter } from '../src/index'
 
-describe('status integration tests', () => {
-    it('should return hello world', () => {
+describe('Test PureThriftFormatter', () => {
+    it('test simple ', () => {
         const rawThrift = 'include    "shared.thrift" ';
         const data = ThriftData.from_string(rawThrift);
         const fmt = new PureThriftFormatter();
@@ -43,10 +43,3 @@ struct Work {
         assert.equal(thrift, expectThrift);
     })
 });
-
-
-/*
-    data = '''
-
-    '''
-*/
