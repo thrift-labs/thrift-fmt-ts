@@ -1,6 +1,6 @@
 import { ParseTree, TerminalNode } from 'antlr4ts/tree';
 import { ThriftData, ThriftParser } from 'thirft-parser-ts';
-import ThriftParserNamespace from 'thirft-parser-ts/lib/ThriftParser';
+import * as ThriftParserNS from 'thirft-parser-ts/lib/ThriftParser';
 
 
 export function hello(): ThriftData {
@@ -8,6 +8,18 @@ export function hello(): ThriftData {
 }
 
 type Nodes = ParseTree[];
+type NodeIsKindFunc = (node: ParseTree) => boolean;
+type TightFN = (index: number, node: ParseTree) => boolean;
+type NodeProcessFunc = (this: PureThriftFormatter, node: ParseTree) => void;
+
+
+export function getChildren(node: ParseTree): Nodes {
+    const children = [];
+    for (let i = 0; i < node.childCount; i++) {
+        children.push(node.getChild(i));
+    }
+    return children;
+}
 
 export class PureThriftFormatter {
     static DEFAULT_INDENT: number = 4
@@ -24,10 +36,6 @@ export class PureThriftFormatter {
 
         this.process_node(node);
         return this._out;
-    }
-
-    process_node(node: ParseTree): void {
-
     }
 
     set_indent(indent: number): void {
@@ -72,10 +80,10 @@ export class PureThriftFormatter {
         }
     }
 
-    static _get_repeat_children(nodes: ParseTree[], is_kind: (node: ParseTree) => boolean): [ParseTree[], ParseTree[]] {
+    static _get_repeat_children(nodes: ParseTree[], kind_fn: NodeIsKindFunc): [ParseTree[], ParseTree[]] {
         const children = [];
         for (const [index, node] of nodes.entries()) {
-            if (!is_kind(node)) {
+            if (!kind_fn(node)) {
                 return [children, nodes.slice(index)];
             }
             children.push(node);
@@ -92,99 +100,106 @@ export class PureThriftFormatter {
     }
 
     static _is_newline_node(node: ParseTree): boolean {
-        return node instanceof ThriftParserNamespace.Enum_ruleContext
-        || node instanceof ThriftParserNamespace.Struct_Context
-        || node instanceof ThriftParserNamespace.Union_Context
-        || node instanceof ThriftParserNamespace.Exception_Context
-        || node instanceof ThriftParserNamespace.ServiceContext
+        return node instanceof ThriftParserNS.Enum_ruleContext
+        || node instanceof ThriftParserNS.Struct_Context
+        || node instanceof ThriftParserNS.Union_Context
+        || node instanceof ThriftParserNS.Exception_Context
+        || node instanceof ThriftParserNS.ServiceContext
     }
 
     after_block_node_hook(_: ParseTree) {}
-
     before_block_node_hook(_: ParseTree) {}
 
     _block_nodes(nodes: ParseTree[], indent: string = '') {
-        let last_node = undefined;
+        let last_node :ParseTree|undefined = undefined;
+        for (let [index, node] of nodes.entries()) {
+            if (node instanceof ThriftParserNS.HeaderContext || node instanceof ThriftParserNS.DefinitionContext) {
+                node = node.getChild(0);
+            }
+            if (index > 0) {
+                if (typeof last_node === typeof node || PureThriftFormatter._is_newline_node(node)) {
+                    this._newline(2);
+                } else {
+                    this._newline();
+                }
+            }
+
+            this._indent(indent);
+            this.process_node(node);
+            this.after_block_node_hook(node);
+            last_node = node;
+        }
     }
+
+    _inline_nodes(nodes: ParseTree[], join: string = ' ') {
+        for (let [index, node] of nodes.entries()) {
+            if (index > 0) {
+                this._push(join);
+            }
+            this.process_node(node);
+        }
+    }
+
+    static _gen_inline_Context(join: string = '', tight_fn: TightFN|undefined) :NodeProcessFunc {
+        return function(this: PureThriftFormatter, node: ParseTree) {
+            for (let i =0; i<node.childCount; i++) {
+                if (i > 0 && join.length > 0) {
+                    if (!tight_fn || !tight_fn(i, node)) {
+                        this._push(join);
+                    }
+                }
+                this.process_node(node.getChild(i));
+            }
+        };
+    }
+
+    before_subfields_hook(_: ParseTree[]) {}
+    after_subfields_hook(_: ParseTree[]) {}
+
+    static _gen_subfields_Context(start:number, kind_fn: NodeIsKindFunc) :NodeProcessFunc {
+        return function(this: PureThriftFormatter, node: ParseTree) {
+            const children = getChildren(node);
+            this._inline_nodes(children.slice(0, start));
+            this._newline();
+
+            const [fields, left] = PureThriftFormatter._get_repeat_children(
+                children.slice(start), kind_fn);
+
+            this.before_subfields_hook(fields);
+            this._block_nodes(fields, ' '.repeat(this._option_indent));
+            this.after_subfields_hook(fields);
+            this._newline();
+
+            this._inline_nodes(left);
+        }
+    }
+
+    process_node(node: ParseTree): void {
+        const key = (typeof node) as keyof typeof this;
+        switch (key) {
+        case 'TerminalNode':
+            this.TerminalNode(node);
+        }
+    }
+
+    TerminalNode = function (this: PureThriftFormatter, n: ParseTree) {
+        const node = <TerminalNode> (n);
+
+        if (PureThriftFormatter._is_EOF(node)) {
+            return;
+        }
+
+        if (this._indent_s.length > 0) {
+            this._push(this._indent_s);
+            this._indent_s = '';
+        }
+
+        this._push(node.symbol.text!);
+    }
+
 }
 
 /*
-    def _block_nodes(self, nodes: List[ParseTree], indent: str = ''):
-        last_node = None
-        for i, node in enumerate(nodes):
-            if isinstance(node, (ThriftParser.HeaderContext, ThriftParser.DefinitionContext)):
-                node = node.children[0]
-
-            if i > 0:
-                if node.__class__ != last_node.__class__ or self._is_newline_node(node):
-                    self._newline(2)
-                else:
-                    self._newline()
-
-            self._indent(indent)
-            self.process_node(node)
-            self.after_block_node_hook(node)
-            last_node = node
-
-    def _inline_nodes(self, nodes: List[ParseTree], join: str = ' '):
-        for i, node in enumerate(nodes):
-            if i > 0:
-                self._push(join)
-            self.process_node(node)
-
-    @staticmethod
-    def _gen_inline_Context(
-            join: str = ' ',
-            tight_fn: Optional[Callable[[int, ParseTree], bool]] = None):
-        def fn(self: ThriftFormatter, node: ParseTree):
-            for i, child in enumerate(node.children):
-                if i > 0 and len(join) > 0:
-                    if not tight_fn or not tight_fn(i, child):
-                        self._push(join)
-                self.process_node(child)
-        return fn
-
-    def before_subfields_hook(self, _: List[ParseTree]):
-        pass
-
-    def after_subfields_hook(self, _: List[ParseTree]):
-        pass
-
-    @staticmethod
-    def _gen_subfields_Context(start: int, field_class: typing.Type):
-        def fn(self: PureThriftFormatter, node: ParseTree):
-            self._inline_nodes(node.children[:start])
-            self._newline()
-            fields, left = self._get_repeat_children(node.children[start:], field_class)
-
-            self.before_subfields_hook(fields)
-            self._block_nodes(fields, indent=' ' * self._option_indent)
-            self.after_subfields_hook(fields)
-
-            self._newline()
-            self._inline_nodes(left)
-        return fn
-
-    def process_node(self, node: ParseTree):
-        if not isinstance(node, TerminalNodeImpl):
-            for child in node.children:
-                child.parent = node
-
-        method_name = node.__class__.__name__.split('.')[-1]
-        fn = getattr(self, method_name, None)
-        assert fn
-        fn(node)
-
-    def TerminalNodeImpl(self, node: TerminalNodeImpl):
-        assert isinstance(node, TerminalNodeImpl)
-        if self._is_EOF(node):
-            return
-
-        # add indent
-        if self._indent_s:
-            self._push(self._indent_s)
-            self._indent_s = ''
-
         self._push(node.symbol.text)
 
     def DocumentContext(self, node: ThriftParser.DocumentContext):
