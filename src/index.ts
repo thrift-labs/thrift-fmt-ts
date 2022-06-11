@@ -15,7 +15,6 @@ export class PureThriftFormatter {
   _newline_c: number = 0;
   _indent_s: string = "";
   _out: string = "";
-  _parent_map = new Map<ParseTree, ParseTree>();
 
   format_node(node: ParseTree): string {
     this._out = "";
@@ -32,10 +31,6 @@ export class PureThriftFormatter {
       children.push(node.getChild(i));
     }
     return children;
-  }
-
-  getParent(node: ParseTree): ParseTree | undefined {
-    return this._parent_map.get(node);
   }
 
   set_indent(indent: number): void {
@@ -170,18 +165,6 @@ export class PureThriftFormatter {
     };
   }
 
-  _gen_inline_Context2(node: ParseTree, join: string = " ", tight_fn?: TightFN | undefined) {
-    for (let i = 0; i < node.childCount; i++) {
-        const child = node.getChild(i);
-        if (i > 0 && join.length > 0) {
-          if (!tight_fn || !tight_fn(i, child)) {
-            this._push(join);
-          }
-        }
-        this.process_node(child);
-    }
-  }
-
   before_subfields_hook(_: ParseTree[]) {}
   after_subfields_hook(_: ParseTree[]) {}
 
@@ -209,11 +192,6 @@ export class PureThriftFormatter {
   }
 
   process_node(node: ParseTree): void {
-    const children = PureThriftFormatter.getChildren(node);
-    for (const child of children) {
-      this._parent_map.set(child, node);
-    }
-
     const key = node.constructor.name;
     switch (key) {
       case "TerminalNode":
@@ -447,28 +425,10 @@ export class PureThriftFormatter {
   Field_reqContext: NodeProcessFunc =
     PureThriftFormatter._gen_inline_Context(" ");
 
-/*
   Map_typeContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
-    "",
-    (i, n) => i > 0 && !PureThriftFormatter._is_token(n.parent!.getChild(i - 1), ",")
+    " ",
+    (i, n) => !PureThriftFormatter._is_token(n.parent!.getChild(i - 1), ",")
   );
-*/
- Map_typeContext(node: ParseTree) {
-     const children = PureThriftFormatter.getChildren(node);
-     console.log("visit map", children.length);
-     const tight_fn = (i: number, n:ParseTree):boolean =>  {
-         //console.log("map child", i, n.parent!.getChild(i - 1).text);
-        const flag = !PureThriftFormatter._is_token(n.parent!.getChild(i - 1), ",");
-        console.log("map child", i, n.parent!.getChild(i - 1).text, flag);
-        return flag;
-     }
-
-    this._gen_inline_Context2(
-        node,
-        " ",
-        tight_fn,
-    )
-  }
 
   Const_listContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
     " ",
