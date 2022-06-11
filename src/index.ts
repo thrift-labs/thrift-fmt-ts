@@ -261,56 +261,82 @@ export class PureThriftFormatter {
         break;
       case "IntegerContext":
         this.IntegerContext(node);
+        break;
       case "Container_typeContext":
         this.Container_typeContext(node);
+        break;
       case "Set_typeContext":
         this.Set_typeContext(node);
+        break;
       case "List_typeContext":
         this.List_typeContext(node);
+        break;
       case "Cpp_typeContext":
         this.Cpp_typeContext(node);
+        break;
       case "Const_mapContext":
         this.Const_mapContext(node);
+        break;
       case "Const_map_entryContext":
         this.Const_map_entryContext(node);
+        break;
       case "List_separatorContext":
         this.List_separatorContext(node);
+        break;
       case "Field_idContext":
         this.Field_idContext(node);
+        break;
       case "Field_reqContext":
         this.Field_reqContext(node);
+        break;
       case "Map_typeContext":
         this.Map_typeContext(node);
+        break;
       case "Const_listContext":
         this.Const_listContext(node);
+        break;
       case "Enum_ruleContext":
         this.Enum_ruleContext(node);
+        break;
       case "Struct_Context":
         this.Struct_Context(node);
+        break;
       case "Union_Context":
         this.Union_Context(node);
+        break;
       case "ExceptionContext":
         this.ExceptionContext(node);
+        break;
       case "FieldContext":
         this.FieldContext(node);
+        break;
       case "Function_Context":
         this.Function_Context(node);
+        break;
       case "OnewayContext":
         this.OnewayContext(node);
+        break;
       case "Function_typeContext":
         this.Function_typeContext(node);
+        break;
       case "Throws_listContext":
         this.Throws_listContext(node);
+        break;
       case "Type_annotationsContext":
         this.Type_annotationsContext(node);
+        break;
       case "Type_annotationContext":
         this.Type_annotationContext(node);
+        break;
       case "Annotation_valueContext":
         this.Annotation_valueContext(node);
+        break;
       case "ServiceContext":
         this.ServiceContext(node);
+        break;
       case "SenumContext":
         this.SenumContext(node);
+        break;
     }
   }
 
