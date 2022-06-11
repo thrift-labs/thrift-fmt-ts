@@ -1,8 +1,9 @@
 {
-  "name": "thirft-parser-ts",
-  "version": "1.0.0",
-  "description": "A parser of Thrift , by Antlr4 and antlr4ts",
-  "main": "src/index.js",
+  "name": "thirft-fmt-ts",
+  "version": "1.0.1",
+  "description": "A formatter of Thrift, reimplement of python thrift-fmt",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "files": [
     "src/*.ts",
     "lib"
@@ -15,20 +16,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/thrift-labs/thrift-parser.git"
+    "url": "git+https://github.com/thrift-labs/thrift-fmt-ts"
   },
   "keywords": [
     "Thrift",
-    "Parser",
-    "antlr4",
-    "antlr4ts"
+    "Formatter",
+    "thrift-fmt"
   ],
   "author": "alingse",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/thrift-labs/thrift-parser/issues"
+    "url": "https://github.com/thrift-labs/thrift-fmt-ts/issues"
   },
-  "homepage": "https://github.com/thrift-labs/thrift-parser#readme",
+  "homepage": "https://github.com/thrift-labs/thrift-fmt-ts#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -40,7 +40,6 @@
     "@types/assert": "^1.5.6",
     "@types/chai": "^4.3.1",
     "@types/mocha": "^9.1.1",
-    "antlr4ts-cli": "^0.5.0-alpha.4",
     "chai": "^4.3.6",
     "mocha": "^10.0.0",
     "ts-node": "^10.8.1"
