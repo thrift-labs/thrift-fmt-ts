@@ -2,10 +2,6 @@ import { ParseTree, TerminalNode } from "antlr4ts/tree";
 import { ThriftData, ThriftParser } from "thirft-parser-ts";
 import * as ThriftParserNS from "thirft-parser-ts/lib/ThriftParser";
 
-export function hello(): ThriftData {
-  return ThriftData.from_string('include "shared.thrift"');
-}
-
 type Nodes = ParseTree[];
 type IsKindFunc = (node: ParseTree) => boolean;
 type TightFN = (index: number, node: ParseTree) => boolean;
