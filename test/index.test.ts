@@ -1,7 +1,7 @@
 import 'mocha';
 import assert  from 'assert';
 
-import { ThriftData } from 'thirft-parser-ts';
+import { ThriftData } from 'thrift-parser-ts';
 import { PureThriftFormatter, ThriftFormatter } from '../src/index'
 
 describe('Test PureThriftFormatter', () => {

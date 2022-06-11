@@ -1,6 +1,6 @@
 import { ParseTree, TerminalNode } from "antlr4ts/tree";
-import { ThriftData, ThriftParser } from "thirft-parser-ts";
-import * as ThriftParserNS from "thirft-parser-ts/lib/ThriftParser";
+import { ThriftData, ThriftParser } from "thrift-parser-ts";
+import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
 
 type Nodes = ParseTree[];
 type IsKindFunc = (node: ParseTree) => boolean;
