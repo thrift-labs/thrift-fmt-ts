@@ -518,191 +518,163 @@ export class PureThriftFormatter {
   ) {};
 }
 
+export class ThriftFormatter extends PureThriftFormatter {
+    _data: ThriftData;
+    _document: ThriftParserNS.DocumentContext
+    _option_comment: boolean = true;
+    _option_patch: boolean = true;
+
+    _field_padding: number = 0;
+    _last_token_index: number = -1;
+
+    constructor(data: ThriftData) {
+        super();
+        this._data = data;
+        this._document = data.document;
+    }
+
+    option(comment: boolean, patch: boolean, indent: number) {
+        this._option_comment = comment;
+        this._option_patch = patch;
+        this.set_indent(indent);
+    }
+
+    format(): string {
+        if (this._option_patch) {
+            this.patch();
+        }
+        return this.format_node(this._document);
+    }
+
+    patch() {
+        PureThriftFormatter.walk_node(this._document, this._patch_field_req);
+        PureThriftFormatter.walk_node(this._document, this._patch_field_list_separator);
+        PureThriftFormatter.walk_node(this._document, this._patch_remove_last_list_separator);
+    }
+
+    // TODO: implement
+    _patch_field_req(n: ParseTree) {}
+    _patch_field_list_separator(n: ParseTree) {}
+    _patch_remove_last_list_separator(n: ParseTree) {}
+
+    _calc_subfields_padding(fields: ParseTree[]) {
+        if (fields.length === 0) {
+            return 0;
+        }
+
+        let padding = 0;
+        for (const field of fields) {
+            const field_out = new PureThriftFormatter().format_node(field);
+            const field_padding = field_out.length;
+            if (field_padding > padding) {
+                padding = field_padding;
+            }
+        }
+        return padding;
+    }
+
+    before_subfields_hook(fields: ParseTree[]) {
+        this._field_padding = this._calc_subfields_padding(fields) + this._option_indent;
+    }
+    after_subfields_hook(fields: ParseTree[]) {
+        this._field_padding = 0;
+    }
+
+    after_block_node_hook(_: ParseTree) {
+        this._tail_comment();
+    }
+
+    _line_comments(node: TerminalNode) {
+        if (!this._option_comment) {
+            return;
+        }
+        //if hasattr(node.symbol, 'is_fake') and node.symbol.is_fake:
+        //  return
+        const tokenIndex = node.symbol.tokenIndex;
+        const comments = [];
+        const tokens = this._data.tokens.getTokens();
+        for (const token of tokens.slice(this._last_token_index + 1)) {
+            if (token.channel != 2) {
+                continue;
+            }
+            if (token.tokenIndex < tokenIndex) {
+                comments.push(token);
+            }
+        }
+
+        for (const token of comments) {
+            if (token.tokenIndex > 0 && token.type == ThriftParser.ML_COMMENT) {
+                this._newline(2);
+            }
+            if (token.text === undefined) {
+                return;
+            }
+            const text = token.text!;
+            if (this._indent_s.length > 0) {
+                this._push(this._indent_s);
+            }
+            this._push(text.trim());
+
+            const last_line = token.line + text.split('\n').length;
+            const is_tight = token.type == ThriftParser.SL_COMMENT
+                || PureThriftFormatter._is_EOF(node)
+                || (node.symbol.line - last_line) <= 1;
+
+            if (is_tight) {
+                this._newline();
+            } else {
+                this._newline(2);
+            }
+        }
+
+        this._last_token_index = tokenIndex;
+    }
+
+    _tail_comment() {
+        if (!this._option_comment) {
+            return;
+        }
+        if (this._last_token_index === -1) {
+            return;
+        }
+        const tokens = this._data.tokens.getTokens();
+        const last_token = tokens[this._last_token_index];
+        const comments = [];
+        for (const token of tokens.slice(this._last_token_index + 1)) {
+            if (token.line != last_token.line) {
+                break;
+            }
+            if (token.channel != 2) {
+                continue;
+            }
+            comments.push(token);
+        }
+
+        if (comments.length > 0) {
+            const comment = comments[0];
+            // align
+            if (this._field_padding > 0) {
+                const cur_tail = this._out.split('\n').at(-1)!;
+                const padding = this._field_padding - cur_tail.length;
+                if (padding > 0) {
+                    this._append(' '.repeat(padding));
+                }
+            }
+            this._append(' ');
+            this._append(comment.text!.trim());
+            this._push(' ');
+            this._last_token_index = comment.tokenIndex;
+        }
+    }
+
+    // TODO: fix me
+    TerminalNode: NodeProcessFunc = function(this: PureThriftFormatter, node: ParseTree) {
+        // this._line_comments(node);
+        //this.super.TerminalNode(node);
+        // super.TerminalNode(node);
+    }
+}
 /*
-class ThriftFormatter(PureThriftFormatter):
-    def __init__(self, data: ThriftData):
-        super().__init__()
-
-        self._data: ThriftData = data
-        self._document: ThriftParser.DocumentContext = data.document
-
-        self._option_comment: bool = True
-        self._option_patch: bool = True
-
-        self._field_padding: int = 0
-        self._last_token_index: int = -1
-
-    def option(self, comment: Optional[bool] = None, patch: Optional[bool] = None, indent: Optional[int] = None):
-        if comment is not None:
-            self._option_comment = comment
-        if patch is not None:
-            self._option_patch = patch
-        if indent is not None:
-            self.set_indent(indent)
-
-    def format(self) -> str:
-        if self._option_patch:
-            self.patch()
-
-        return self.format_node(self._document)
-
-    def patch(self):
-        self._document.parent = None
-        self.walk_node(self._document, self._patch_field_req)
-        self.walk_node(self._document, self._patch_field_list_separator)
-        self.walk_node(self._document, self._patch_remove_last_list_separator)
-
-    @staticmethod
-    def _patch_field_req(node: ParseTree):
-        if not isinstance(node, ThriftParser.FieldContext):
-            return
-        if isinstance(node.parent, (ThriftParser.Function_Context, ThriftParser.Throws_listContext)):
-            return
-
-        for i, child in enumerate(node.children):
-            if isinstance(child, ThriftParser.Field_reqContext):
-                return
-            if isinstance(child, ThriftParser.Field_typeContext):
-                break
-
-        fake_token = CommonToken()
-        fake_token.type = 21
-        fake_token.text = 'required'
-        fake_token.is_fake = True
-        fake_node = TerminalNodeImpl(fake_token)
-        fake_req = ThriftParser.Field_reqContext(parser=node.parser)
-        fake_req.children = [fake_node]
-        # patch
-        node.children.insert(i, fake_req)
-
-    @staticmethod
-    def _patch_field_list_separator(node: ParseTree):
-        classes = (
-            ThriftParser.Enum_fieldContext,
-            ThriftParser.FieldContext,
-            ThriftParser.Function_Context,
-        )
-        if not isinstance(node, classes):
-            return
-
-        tail = node.children[-1]
-        if isinstance(tail, ThriftParser.List_separatorContext):
-            tail.children[0].symbol.text = ','
-            return
-
-        fake_token = CommonToken()
-        fake_token.text = ','
-        fake_token.is_fake = True
-        fake_node = TerminalNodeImpl(fake_token)
-        fake_ctx = ThriftParser.List_separatorContext(parser=node.parser)
-        fake_ctx.children = [fake_node]
-        node.children.append(fake_ctx)
-
-    def _patch_remove_last_list_separator(self, node: ParseTree):
-        is_inline_field = isinstance(node, ThriftParser.FieldContext) and \
-            isinstance(node.parent, (ThriftParser.Function_Context, ThriftParser.Throws_listContext))
-        is_inline_node = isinstance(node, ThriftParser.Type_annotationContext)
-
-        if is_inline_field or is_inline_node:
-            self._remove_last_list_separator(node)
-
-    @staticmethod
-    def _remove_last_list_separator(node: ParseTree):
-        if not node.parent:
-            return
-
-        is_last = False
-        brothers = node.parent.children
-        for i, child in enumerate(brothers):
-            if child is node and i < len(brothers) - 1:
-                if not isinstance(brothers[i + 1], child.__class__):
-                    is_last = True
-                    break
-
-        if is_last and isinstance(node.children[-1], ThriftParser.List_separatorContext):
-            node.children.pop()
-
-    def _calc_subfields_padding(self, fields: List[ParseTree]):
-        if not fields:
-            return 0
-
-        padding = 0
-        for i, field in enumerate(fields):
-            out = PureThriftFormatter().format_node(field)
-            if len(out) > padding:
-                padding = len(out)
-        return padding
-
-    def before_subfields_hook(self, fields: List[ParseTree]):
-        self._field_padding = self._calc_subfields_padding(fields) + self._option_indent
-
-    def after_subfields_hook(self, _: List[ParseTree]):
-        self._field_padding = 0
-
-    def after_block_node_hook(self, _: ParseTree):
-        self._tail_comment()
-
-    def _line_comments(self, node: TerminalNodeImpl):
-        if not self._option_comment:
-            return
-
-        if hasattr(node.symbol, 'is_fake') and node.symbol.is_fake:
-            return
-
-        token_index = node.symbol.tokenIndex
-        comments = []
-        for token in self._data.tokens[self._last_token_index + 1:]:
-            if token.channel != 2:
-                continue
-            if self._last_token_index < token.tokenIndex < token_index:
-                comments.append(token)
-
-        for i, token in enumerate(comments):
-            if token.tokenIndex > 0 and token.type == ThriftParser.ML_COMMENT:
-                self._newline(2)
-
-            if self._indent_s:
-                self._push(self._indent_s)
-            self._push(token.text.strip())
-
-            is_tight: bool = token.type == ThriftParser.SL_COMMENT \
-                or self._is_EOF(node) \
-                or 0 < node.symbol.line - (token.text.count('\n') + token.line) <= 1
-            if is_tight:
-                self._newline()
-            else:
-                self._newline(2)
-
-        self._last_token_index = node.symbol.tokenIndex
-
-    def _tail_comment(self):
-        if not self._option_comment:
-            return
-
-        if self._last_token_index == -1:
-            return
-
-        last_token = self._data.tokens[self._last_token_index]
-        comments = []
-        for token in self._data.tokens[self._last_token_index + 1:]:
-            if token.line != last_token.line:
-                break
-            if token.channel != 2:
-                continue
-            comments.append(token)
-
-        assert len(comments) <= 1
-        if comments:
-            if self._field_padding > 0:
-                cur = len(self._out.getvalue().rsplit('\n', 1)[-1])
-                padding = self._field_padding - cur
-                if padding > 0:
-                    self._append(' ' * padding)
-
-            self._append(' ')
-            self._append(comments[0].text.strip())
-            self._push('')
-            self._last_token_index = comments[0].tokenIndex
 
     def TerminalNodeImpl(self, node: TerminalNodeImpl):
         assert isinstance(node, TerminalNodeImpl)
