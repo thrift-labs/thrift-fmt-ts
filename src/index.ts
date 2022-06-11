@@ -7,21 +7,15 @@ type IsKindFunc = (node: ParseTree) => boolean;
 type TightFN = (index: number, node: ParseTree) => boolean;
 type NodeProcessFunc = (this: PureThriftFormatter, node: ParseTree) => void;
 
-export function getChildren(node: ParseTree): Nodes {
-  const children = [];
-  for (let i = 0; i < node.childCount; i++) {
-    children.push(node.getChild(i));
-  }
-  return children;
-}
-
 export class PureThriftFormatter {
   static DEFAULT_INDENT: number = 4;
 
   _option_indent: number = PureThriftFormatter.DEFAULT_INDENT;
+
   _newline_c: number = 0;
   _indent_s: string = "";
   _out: string = "";
+  _parent_map = new Map<ParseTree, ParseTree>();
 
   format_node(node: ParseTree): string {
     this._out = "";
@@ -30,6 +24,18 @@ export class PureThriftFormatter {
 
     this.process_node(node);
     return this._out;
+  }
+
+  static getChildren(node: ParseTree): Nodes {
+    const children = [];
+    for (let i = 0; i < node.childCount; i++) {
+      children.push(node.getChild(i));
+    }
+    return children;
+  }
+
+  getParent(node: ParseTree): ParseTree | undefined {
+    return this._parent_map.get(node);
   }
 
   set_indent(indent: number): void {
@@ -153,12 +159,13 @@ export class PureThriftFormatter {
   ): NodeProcessFunc {
     return function (this: PureThriftFormatter, node: ParseTree) {
       for (let i = 0; i < node.childCount; i++) {
+        const child = node.getChild(i);
         if (i > 0 && join.length > 0) {
-          if (!tight_fn || !tight_fn(i, node)) {
+          if (!tight_fn || !tight_fn(i, child)) {
             this._push(join);
           }
         }
-        this.process_node(node.getChild(i));
+        this.process_node(child);
       }
     };
   }
@@ -171,7 +178,7 @@ export class PureThriftFormatter {
     kind_fn: IsKindFunc
   ): NodeProcessFunc {
     return function (this: PureThriftFormatter, node: ParseTree) {
-      const children = getChildren(node);
+      const children = PureThriftFormatter.getChildren(node);
       this._inline_nodes(children.slice(0, start));
       this._newline();
 
@@ -190,6 +197,11 @@ export class PureThriftFormatter {
   }
 
   process_node(node: ParseTree): void {
+    const children = PureThriftFormatter.getChildren(node);
+    for (const child of children) {
+      this._parent_map.set(child, node);
+    }
+
     const key = node.constructor.name;
     switch (key) {
       case "TerminalNode":
@@ -336,7 +348,7 @@ export class PureThriftFormatter {
     }
   }
 
-  TerminalNode( n: ParseTree) {
+  TerminalNode(n: ParseTree) {
     const node = <TerminalNode>n;
 
     if (PureThriftFormatter._is_EOF(node)) {
@@ -349,13 +361,13 @@ export class PureThriftFormatter {
     }
 
     this._push(node.symbol.text!);
-  };
+  }
 
   DocumentContext: NodeProcessFunc = function (
     this: PureThriftFormatter,
     node: ParseTree
   ) {
-    const children = getChildren(node);
+    const children = PureThriftFormatter.getChildren(node);
     this._block_nodes(children);
   };
 
@@ -424,9 +436,10 @@ export class PureThriftFormatter {
     PureThriftFormatter._gen_inline_Context(" ");
 
   Map_typeContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
-    " ",
-    (i, n) => !PureThriftFormatter._is_token(n.parent!.getChild(i - 1), ",")
+    "",
+    (i, n) => i > 0 && !PureThriftFormatter._is_token(n.parent!.getChild(i - 1), ",")
   );
+
   Const_listContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
     " ",
     (_, n) => n instanceof ThriftParserNS.List_separatorContext
@@ -512,162 +525,172 @@ export class PureThriftFormatter {
 }
 
 export class ThriftFormatter extends PureThriftFormatter {
-    _data: ThriftData;
-    _document: ThriftParserNS.DocumentContext
-    _option_comment: boolean = true;
-    _option_patch: boolean = true;
+  _data: ThriftData;
+  _document: ThriftParserNS.DocumentContext;
+  _option_comment: boolean = true;
+  _option_patch: boolean = true;
 
-    _field_padding: number = 0;
-    _last_token_index: number = -1;
+  _field_padding: number = 0;
+  _last_token_index: number = -1;
 
-    constructor(data: ThriftData) {
-        super();
-        this._data = data;
-        this._document = data.document;
+  constructor(data: ThriftData) {
+    super();
+    this._data = data;
+    this._document = data.document;
+  }
+
+  option(comment: boolean, patch: boolean, indent?: number) {
+    this._option_comment = comment;
+    this._option_patch = patch;
+    if (indent !== undefined) {
+      this.set_indent(indent);
+    }
+  }
+
+  format(): string {
+    if (this._option_patch) {
+      this.patch();
+    }
+    return this.format_node(this._document);
+  }
+
+  patch() {
+    PureThriftFormatter.walk_node(this._document, this._patch_field_req);
+    PureThriftFormatter.walk_node(
+      this._document,
+      this._patch_field_list_separator
+    );
+    PureThriftFormatter.walk_node(
+      this._document,
+      this._patch_remove_last_list_separator
+    );
+  }
+
+  // TODO: implement
+  _patch_field_req(n: ParseTree) {}
+  _patch_field_list_separator(n: ParseTree) {}
+  _patch_remove_last_list_separator(n: ParseTree) {}
+
+  _calc_subfields_padding(fields: ParseTree[]) {
+    if (fields.length === 0) {
+      return 0;
     }
 
-    option(comment: boolean, patch: boolean, indent: number) {
-        this._option_comment = comment;
-        this._option_patch = patch;
-        this.set_indent(indent);
+    let padding = 0;
+    for (const field of fields) {
+      const field_out = new PureThriftFormatter().format_node(field);
+      const field_padding = field_out.length;
+      if (field_padding > padding) {
+        padding = field_padding;
+      }
+    }
+    return padding;
+  }
+
+  before_subfields_hook(fields: ParseTree[]) {
+    this._field_padding =
+      this._calc_subfields_padding(fields) + this._option_indent;
+  }
+  after_subfields_hook(fields: ParseTree[]) {
+    this._field_padding = 0;
+  }
+
+  after_block_node_hook(_: ParseTree) {
+    this._tail_comment();
+  }
+
+  _line_comments(node: TerminalNode) {
+    if (!this._option_comment) {
+      return;
+    }
+    //if hasattr(node.symbol, 'is_fake') and node.symbol.is_fake:
+    //  return
+    const tokenIndex = node.symbol.tokenIndex;
+    const comments = [];
+    const tokens = this._data.tokens.getTokens();
+    for (const token of tokens.slice(this._last_token_index + 1)) {
+      if (token.channel != 2) {
+        continue;
+      }
+      if (token.tokenIndex < tokenIndex) {
+        comments.push(token);
+      }
     }
 
-    format(): string {
-        if (this._option_patch) {
-            this.patch();
-        }
-        return this.format_node(this._document);
+    for (const token of comments) {
+      if (token.tokenIndex > 0 && token.type == ThriftParser.ML_COMMENT) {
+        this._newline(2);
+      }
+      if (token.text === undefined) {
+        return;
+      }
+      const text = token.text!;
+      if (this._indent_s.length > 0) {
+        this._push(this._indent_s);
+      }
+      this._push(text.trim());
+
+      const last_line = token.line + text.split("\n").length;
+      const is_tight =
+        token.type == ThriftParser.SL_COMMENT ||
+        PureThriftFormatter._is_EOF(node) ||
+        node.symbol.line - last_line <= 1;
+
+      if (is_tight) {
+        this._newline();
+      } else {
+        this._newline(2);
+      }
     }
 
-    patch() {
-        PureThriftFormatter.walk_node(this._document, this._patch_field_req);
-        PureThriftFormatter.walk_node(this._document, this._patch_field_list_separator);
-        PureThriftFormatter.walk_node(this._document, this._patch_remove_last_list_separator);
+    this._last_token_index = tokenIndex;
+  }
+
+  _tail_comment() {
+    if (!this._option_comment) {
+      return;
+    }
+    if (this._last_token_index === -1) {
+      return;
+    }
+    const tokens = this._data.tokens.getTokens();
+    const last_token = tokens[this._last_token_index];
+    const comments = [];
+    for (const token of tokens.slice(this._last_token_index + 1)) {
+      if (token.line != last_token.line) {
+        break;
+      }
+      if (token.channel != 2) {
+        continue;
+      }
+      comments.push(token);
     }
 
-    // TODO: implement
-    _patch_field_req(n: ParseTree) {}
-    _patch_field_list_separator(n: ParseTree) {}
-    _patch_remove_last_list_separator(n: ParseTree) {}
-
-    _calc_subfields_padding(fields: ParseTree[]) {
-        if (fields.length === 0) {
-            return 0;
+    if (comments.length > 0) {
+      const comment = comments[0];
+      // align
+      if (this._field_padding > 0) {
+        const cur_tail = this._out.split("\n").at(-1)!;
+        const padding = this._field_padding - cur_tail.length;
+        if (padding > 0) {
+          this._append(" ".repeat(padding));
         }
+      }
+      this._append(" ");
+      this._append(comment.text!.trim());
+      this._push(" ");
+      this._last_token_index = comment.tokenIndex;
+    }
+  }
 
-        let padding = 0;
-        for (const field of fields) {
-            const field_out = new PureThriftFormatter().format_node(field);
-            const field_padding = field_out.length;
-            if (field_padding > padding) {
-                padding = field_padding;
-            }
-        }
-        return padding;
+  TerminalNode(n: ParseTree) {
+    const node = <TerminalNode>n;
+
+    if (this._newline_c > 0) {
+      this._tail_comment();
     }
 
-    before_subfields_hook(fields: ParseTree[]) {
-        this._field_padding = this._calc_subfields_padding(fields) + this._option_indent;
-    }
-    after_subfields_hook(fields: ParseTree[]) {
-        this._field_padding = 0;
-    }
-
-    after_block_node_hook(_: ParseTree) {
-        this._tail_comment();
-    }
-
-    _line_comments(node: TerminalNode) {
-        if (!this._option_comment) {
-            return;
-        }
-        //if hasattr(node.symbol, 'is_fake') and node.symbol.is_fake:
-        //  return
-        const tokenIndex = node.symbol.tokenIndex;
-        const comments = [];
-        const tokens = this._data.tokens.getTokens();
-        for (const token of tokens.slice(this._last_token_index + 1)) {
-            if (token.channel != 2) {
-                continue;
-            }
-            if (token.tokenIndex < tokenIndex) {
-                comments.push(token);
-            }
-        }
-
-        for (const token of comments) {
-            if (token.tokenIndex > 0 && token.type == ThriftParser.ML_COMMENT) {
-                this._newline(2);
-            }
-            if (token.text === undefined) {
-                return;
-            }
-            const text = token.text!;
-            if (this._indent_s.length > 0) {
-                this._push(this._indent_s);
-            }
-            this._push(text.trim());
-
-            const last_line = token.line + text.split('\n').length;
-            const is_tight = token.type == ThriftParser.SL_COMMENT
-                || PureThriftFormatter._is_EOF(node)
-                || (node.symbol.line - last_line) <= 1;
-
-            if (is_tight) {
-                this._newline();
-            } else {
-                this._newline(2);
-            }
-        }
-
-        this._last_token_index = tokenIndex;
-    }
-
-    _tail_comment() {
-        if (!this._option_comment) {
-            return;
-        }
-        if (this._last_token_index === -1) {
-            return;
-        }
-        const tokens = this._data.tokens.getTokens();
-        const last_token = tokens[this._last_token_index];
-        const comments = [];
-        for (const token of tokens.slice(this._last_token_index + 1)) {
-            if (token.line != last_token.line) {
-                break;
-            }
-            if (token.channel != 2) {
-                continue;
-            }
-            comments.push(token);
-        }
-
-        if (comments.length > 0) {
-            const comment = comments[0];
-            // align
-            if (this._field_padding > 0) {
-                const cur_tail = this._out.split('\n').at(-1)!;
-                const padding = this._field_padding - cur_tail.length;
-                if (padding > 0) {
-                    this._append(' '.repeat(padding));
-                }
-            }
-            this._append(' ');
-            this._append(comment.text!.trim());
-            this._push(' ');
-            this._last_token_index = comment.tokenIndex;
-        }
-    }
-
-    TerminalNode(n: ParseTree) {
-        const node = <TerminalNode> n;
-
-        if (this._newline_c > 0) {
-            this._tail_comment();
-        }
-
-        this._line_comments(node);
-        super.TerminalNode(node);
-    }
+    this._line_comments(node);
+    super.TerminalNode(node);
+  }
 }
