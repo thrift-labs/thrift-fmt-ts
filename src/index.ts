@@ -8,13 +8,13 @@ type TightFN = (index: number, node: ParseTree) => boolean;
 type NodeProcessFunc = (this: PureThriftFormatter, node: ParseTree) => void;
 
 export class PureThriftFormatter {
-  static DEFAULT_INDENT: number = 4;
+  static DEFAULT_INDENT = 4;
 
   _option_indent: number = PureThriftFormatter.DEFAULT_INDENT;
 
-  _newline_c: number = 0;
-  _indent_s: string = "";
-  _out: string = "";
+  _newline_c = 0;
+  _indent_s = "";
+  _out = "";
 
   format_node(node: ParseTree): string {
     this._out = "";
@@ -51,7 +51,7 @@ export class PureThriftFormatter {
     this._out += text;
   }
 
-  _newline(repeat: number = 1) {
+  _newline(repeat = 1) {
     const diff = repeat - this._newline_c;
     if (diff <= 0) {
       return;
@@ -59,7 +59,7 @@ export class PureThriftFormatter {
     this._newline_c += diff;
   }
 
-  _indent(indent: string = "") {
+  _indent(indent = "") {
     this._indent_s = indent;
   }
 
@@ -109,11 +109,12 @@ export class PureThriftFormatter {
     );
   }
 
-  after_block_node_hook(_: ParseTree) {}
-  before_block_node_hook(_: ParseTree) {}
+  after_block_node_hook(_: ParseTree) {}  // eslint-disable-line
+  before_block_node_hook(_: ParseTree) {} // eslint-disable-line
 
-  _block_nodes(nodes: ParseTree[], indent: string = "") {
+  _block_nodes(nodes: ParseTree[], indent = "") {
     let last_node: ParseTree | undefined = undefined;
+    // eslint-disable-next-line
     for (let [index, node] of nodes.entries()) {
       if (
         node instanceof ThriftParserNS.HeaderContext ||
@@ -139,7 +140,8 @@ export class PureThriftFormatter {
     }
   }
 
-  _inline_nodes(nodes: ParseTree[], join: string = " ") {
+  _inline_nodes(nodes: ParseTree[], join = " ") {
+    // eslint-disable-next-line
     for (let [index, node] of nodes.entries()) {
       if (index > 0) {
         this._push(join);
@@ -148,10 +150,7 @@ export class PureThriftFormatter {
     }
   }
 
-  static _gen_inline_Context(
-    join: string = " ",
-    tight_fn?: TightFN | undefined
-  ): NodeProcessFunc {
+  static _gen_inline_Context(join = " ", tight_fn?: TightFN | undefined): NodeProcessFunc {
     return function (this: PureThriftFormatter, node: ParseTree) {
       for (let i = 0; i < node.childCount; i++) {
         const child = node.getChild(i);
@@ -165,8 +164,8 @@ export class PureThriftFormatter {
     };
   }
 
-  before_subfields_hook(_: ParseTree[]) {}
-  after_subfields_hook(_: ParseTree[]) {}
+  before_subfields_hook(_: ParseTree[]) {} // eslint-disable-line
+  after_subfields_hook(_: ParseTree[]) {}  // eslint-disable-line
 
   static _gen_subfields_Context(
     start: number,
@@ -508,20 +507,18 @@ export class PureThriftFormatter {
     }
   };
 
-  SenumContext: NodeProcessFunc = function (
-    this: PureThriftFormatter,
-    n: ParseTree
-  ) {};
+  SenumContext: NodeProcessFunc = function (this: PureThriftFormatter, _: ParseTree
+  ) {}; // eslint-disable-line
 }
 
 export class ThriftFormatter extends PureThriftFormatter {
   _data: ThriftData;
   _document: ThriftParserNS.DocumentContext;
-  _option_comment: boolean = true;
-  _option_patch: boolean = true;
+  _option_comment = true;
+  _option_patch = true;
 
-  _field_padding: number = 0;
-  _last_token_index: number = -1;
+  _field_padding = 0;
+  _last_token_index = -1;
 
   constructor(data: ThriftData) {
     super();
@@ -557,9 +554,9 @@ export class ThriftFormatter extends PureThriftFormatter {
   }
 
   // TODO: implement
-  _patch_field_req(n: ParseTree) {}
-  _patch_field_list_separator(n: ParseTree) {}
-  _patch_remove_last_list_separator(n: ParseTree) {}
+  _patch_field_req(n: ParseTree) {}             // eslint-disable-line
+  _patch_field_list_separator(n: ParseTree) {}  // eslint-disable-line
+  _patch_remove_last_list_separator(n: ParseTree) {} // eslint-disable-line
 
   _calc_subfields_padding(fields: ParseTree[]) {
     if (fields.length === 0) {
