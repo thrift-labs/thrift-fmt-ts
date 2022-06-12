@@ -6,15 +6,30 @@ type Nodes = ParseTree[];
 type IsKindFunc = (node: ParseTree) => boolean;
 type TightFN = (index: number, node: ParseTree) => boolean;
 type NodeProcessFunc = (this: PureThriftFormatter, node: ParseTree) => void;
+type NodeProcessorFunc = (node: ParseTree) => void;
 
 export class PureThriftFormatter {
   static DEFAULT_INDENT = 4;
 
+  _processor_map: Map<string, NodeProcessorFunc>;
   _option_indent: number = PureThriftFormatter.DEFAULT_INDENT;
-
   _newline_c = 0;
   _indent_s = "";
   _out = "";
+
+  constructor() {
+    this._processor_map = new Map<string, NodeProcessorFunc>();
+    this._processor_map.set("DocumentContext", this.DocumentContext);
+    this._processor_map.set("HeaderContext", this.HeaderContext);
+    this._processor_map.set("DefinitionContext", this.DefinitionContext);
+    ["Type_ruleContext",
+    "Field_ruleContext",
+    "Type_idContext",
+    "Type_listContext",
+    ].forEach(name => {
+      this._processor_map.set(name, this._gen_inline_Context_v2(""));
+    })
+  }
 
   format_node(node: ParseTree): string {
     this._out = "";
@@ -164,6 +179,21 @@ export class PureThriftFormatter {
     };
   }
 
+  _gen_inline_Context_v2(join = " ", tight_fn?: TightFN | undefined): NodeProcessorFunc {
+    const cur = this;
+    return function (node: ParseTree) {
+      for (let i = 0; i < node.childCount; i++) {
+        const child = node.getChild(i);
+        if (i > 0 && join.length > 0) {
+          if (!tight_fn || !tight_fn(i, child)) {
+            cur._push(join);
+          }
+        }
+        cur.process_node(child);
+      }
+    };
+  }
+
   before_subfields_hook(_: ParseTree[]) {} // eslint-disable-line
   after_subfields_hook(_: ParseTree[]) {}  // eslint-disable-line
 
@@ -192,33 +222,19 @@ export class PureThriftFormatter {
 
   process_node(node: ParseTree): void {
     const key = node.constructor.name;
+    if (this._processor_map.has(key)) {
+      this._processor_map.get(key)!(node);
+    }
+
     switch (key) {
       case "TerminalNode":
         this.TerminalNode(node);
         break;
-      case "DocumentContext":
-        this.DocumentContext(node);
-        break;
-      case "HeaderContext":
-        this.HeaderContext(node);
-        break;
       case "DefinitionContext":
         this.DefinitionContext(node);
         break;
-      case "Type_ruleContext":
-        this.Type_ruleContext(node);
-        break;
       case "Enum_fieldContext":
         this.Enum_fieldContext(node);
-        break;
-      case "Field_ruleContext":
-        this.Field_ruleContext(node);
-        break;
-      case "Type_idContext":
-        this.Type_idContext(node);
-        break;
-      case "Type_listContext":
-        this.Type_listContext(node);
         break;
       case "Type_mapContext":
         this.Type_mapContext(node);
@@ -352,13 +368,10 @@ export class PureThriftFormatter {
     this._push(node.symbol.text!);
   }
 
-  DocumentContext: NodeProcessFunc = function (
-    this: PureThriftFormatter,
-    node: ParseTree
-  ) {
+  DocumentContext(node: ParseTree) {
     const children = PureThriftFormatter.getChildren(node);
     this._block_nodes(children);
-  };
+  }
 
   HeaderContext: NodeProcessFunc = function (
     this: PureThriftFormatter,
@@ -374,13 +387,6 @@ export class PureThriftFormatter {
     this.process_node(node.getChild(0));
   };
 
-  Type_ruleContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
-  Field_ruleContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
-  Type_idContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context("");
-  Type_listContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
   Type_mapContext: NodeProcessFunc =
     PureThriftFormatter._gen_inline_Context("");
   Type_setContext: NodeProcessFunc =
