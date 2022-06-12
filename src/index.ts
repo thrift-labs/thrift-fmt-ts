@@ -377,10 +377,6 @@ export class PureThriftFormatter {
 
   Type_ruleContext: NodeProcessFunc =
     PureThriftFormatter._gen_inline_Context("");
-  Enum_fieldContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
-    " ",
-    (_, node) => node instanceof ThriftParserNS.Enum_fieldContext
-  );
   Field_ruleContext: NodeProcessFunc =
     PureThriftFormatter._gen_inline_Context("");
   Type_idContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context("");
@@ -438,7 +434,11 @@ export class PureThriftFormatter {
     PureThriftFormatter._gen_subfields_Context(
       3,
       (n) => n instanceof ThriftParserNS.Enum_fieldContext
-    );
+  );
+  Enum_fieldContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
+    " ",
+    (_, node) => node instanceof ThriftParserNS.List_separatorContext
+  );
   Struct_Context: NodeProcessFunc = PureThriftFormatter._gen_subfields_Context(
     3,
     (n) => n instanceof ThriftParserNS.FieldContext

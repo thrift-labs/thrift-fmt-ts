@@ -12,6 +12,28 @@ describe('Test PureThriftFormatter', () => {
         const thrift = fmt.format_node(data.document);
         assert.equal(thrift, 'include "shared.thrift"');
     })
+
+    it('test enum', () => {
+        const rawThrift = `enum Numberz {
+            ONE = 1 ,
+            TWO ,
+            THREE ,
+            FIVE = 5 ,
+            SIX ,
+            EIGHT = 8
+        }`
+        const data = ThriftData.from_string(rawThrift);
+        const fmt = new PureThriftFormatter();
+        const thrift = fmt.format_node(data.document);
+        assert.equal(thrift, `enum Numberz {
+    ONE = 1,
+    TWO,
+    THREE,
+    FIVE = 5,
+    SIX,
+    EIGHT = 8
+}`);
+    })
 });
 
 
