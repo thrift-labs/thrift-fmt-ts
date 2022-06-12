@@ -659,7 +659,8 @@ export class ThriftFormatter extends PureThriftFormatter {
       const comment = comments[0];
       // align
       if (this._field_padding > 0) {
-        const cur_tail = this._out.split("\n").at(-1)!;
+        const parts = this._out.split('\n');
+        const cur_tail = parts[parts.length -1];
         const padding = this._field_padding - cur_tail.length;
         if (padding > 0) {
           this._append(" ".repeat(padding));
