@@ -317,8 +317,8 @@ export class PureThriftFormatter {
       case "Union_Context":
         this.Union_Context(node);
         break;
-      case "ExceptionContext":
-        this.ExceptionContext(node);
+      case "Exception_Context":
+        this.Exception_Context(node);
         break;
       case "FieldContext":
         this.FieldContext(node);
@@ -452,7 +452,7 @@ export class PureThriftFormatter {
     3,
     (n) => n instanceof ThriftParserNS.FieldContext
   );
-  ExceptionContext: NodeProcessFunc =
+  Exception_Context: NodeProcessFunc =
     PureThriftFormatter._gen_subfields_Context(
       3,
       (n) => n instanceof ThriftParserNS.FieldContext
