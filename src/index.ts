@@ -554,7 +554,6 @@ export class ThriftFormatter extends PureThriftFormatter {
     );
   }
 
-  // TODO: implement
   _patch_field_req(n: ParseTree) {
     if (!(n instanceof ThriftParserNS.FieldContext)) {
       return;
@@ -588,7 +587,33 @@ export class ThriftFormatter extends PureThriftFormatter {
     n.children!.splice(i, 0, fake_ctx);
   }
 
-  _patch_field_list_separator(n: ParseTree) {}  // eslint-disable-line
+  _patch_field_list_separator(n: ParseTree) {
+    if (!(n instanceof ThriftParserNS.Enum_fieldContext
+      || n instanceof ThriftParserNS.FieldContext
+      || n instanceof ThriftParserNS.Function_Context)) {
+      return;
+    }
+    const child = n.getChild(n.childCount - 1);
+    if (child instanceof ThriftParserNS.List_separatorContext) {
+      const comma = <TerminalNode>child.getChild(0);
+      const token = <CommonToken> comma.symbol;
+      token.text = ",";
+    }
+    /*
+        tail = node.children[-1]
+        if isinstance(tail, ThriftParser.List_separatorContext):
+            tail.children[0].symbol.text = ','
+            return
+
+        fake_token = CommonToken()
+        fake_token.text = ','
+        fake_token.is_fake = True
+        fake_node = TerminalNodeImpl(fake_token)
+        fake_ctx = ThriftParser.List_separatorContext(parser=node.parser)
+        fake_ctx.children = [fake_node]
+        node.children.append(fake_ctx)
+    */
+  }
   _patch_remove_last_list_separator(n: ParseTree) {} // eslint-disable-line
 
   _calc_subfields_padding(fields: ParseTree[]) {
