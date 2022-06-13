@@ -64,6 +64,33 @@ struct Work {
 }`
         assert.equal(thrift, expectThrift);
     })
+
+    it('with with patch', () => {
+        const rawThrift = `include    "shared.thrift"   // a
+        // work info
+        struct Work {
+        1: i32 num1 = 0,
+            2: required i32 num2, // num2 for
+            3: Operation op, // op is Operation
+            4: optional string comment,
+            5: map<string,list<string>> tags, //hello
+        }`;
+        const data = ThriftData.from_string(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(true, true);
+        const thrift = fmt.format();
+const expectThrift = `include "shared.thrift" // a
+
+// work info
+struct Work {
+    1: required i32 num1 = 0,
+    2: required i32 num2,                       // num2 for
+    3: required Operation op,                   // op is Operation
+    4: optional string comment,
+    5: required map<string, list<string>> tags, //hello
+}`
+        assert.equal(thrift, expectThrift);
+    })
 });
 
 describe('test ThriftData', () => {

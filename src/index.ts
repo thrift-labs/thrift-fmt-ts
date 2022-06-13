@@ -1,3 +1,4 @@
+import { CommonToken } from 'antlr4ts';
 import { ParseTree, TerminalNode } from "antlr4ts/tree";
 import { ThriftData, ThriftParser } from "thrift-parser-ts";
 import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
@@ -301,8 +302,8 @@ export class PureThriftFormatter {
       case "Union_Context":
         this.Union_Context(node);
         break;
-      case "ExceptionContext":
-        this.ExceptionContext(node);
+      case "Exception_Context":
+        this.Exception_Context(node);
         break;
       case "FieldContext":
         this.FieldContext(node);
@@ -446,7 +447,7 @@ export class PureThriftFormatter {
     3,
     (n) => n instanceof ThriftParserNS.FieldContext
   );
-  ExceptionContext: NodeProcessFunc =
+  Exception_Context: NodeProcessFunc =
     PureThriftFormatter._gen_subfields_Context(
       3,
       (n) => n instanceof ThriftParserNS.FieldContext
@@ -554,7 +555,39 @@ export class ThriftFormatter extends PureThriftFormatter {
   }
 
   // TODO: implement
-  _patch_field_req(n: ParseTree) {}             // eslint-disable-line
+  _patch_field_req(n: ParseTree) {
+    if (!(n instanceof ThriftParserNS.FieldContext)) {
+      return;
+    }
+    if (n.parent === undefined
+      || n.parent instanceof ThriftParserNS.Function_Context
+      || n.parent instanceof ThriftParserNS.Function_Context) {
+      return;
+    }
+    let i = 0;
+    for (; i < n.childCount; i++) {
+      const child = n.getChild(i);
+      if (child instanceof ThriftParserNS.Field_reqContext) {
+        return;
+      }
+      if (child instanceof ThriftParserNS.Field_typeContext) {
+        break;
+      }
+    }
+
+    const fake_token = new CommonToken(ThriftParser.T__20, "required");
+    fake_token.line = -1;
+    fake_token.charPositionInLine = -1;
+    fake_token.tokenIndex = -1;
+    const fake_node = new TerminalNode(fake_token);
+    const fake_ctx = new ThriftParserNS.Field_reqContext(n, 0);
+
+    fake_node.setParent(fake_ctx);
+    fake_ctx.setParent(n);
+    fake_ctx.addChild(fake_node);
+    n.children!.splice(i, 0, fake_ctx);
+  }
+
   _patch_field_list_separator(n: ParseTree) {}  // eslint-disable-line
   _patch_remove_last_list_separator(n: ParseTree) {} // eslint-disable-line
 
@@ -590,8 +623,12 @@ export class ThriftFormatter extends PureThriftFormatter {
     if (!this._option_comment) {
       return;
     }
-    //if hasattr(node.symbol, 'is_fake') and node.symbol.is_fake:
-    //  return
+
+    // fake_token
+    if (node.symbol.line === -1) {
+      return;
+    }
+
     const tokenIndex = node.symbol.tokenIndex;
     const comments = [];
     const tokens = this._data.tokens.getTokens();
