@@ -1,6 +1,6 @@
 {
   "name": "thrift-fmt-ts",
-  "version": "1.0.3-a2",
+  "version": "1.0.3-a3",
   "description": "A formatter of Thrift, reimplement of python thrift-fmt",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
