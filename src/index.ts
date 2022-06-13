@@ -582,8 +582,9 @@ export class ThriftFormatter extends PureThriftFormatter {
     const fake_ctx = new ThriftParserNS.Field_reqContext(n, 0);
 
     fake_node.setParent(fake_ctx);
-    fake_ctx.setParent(n);
     fake_ctx.addChild(fake_node);
+
+    fake_ctx.setParent(n);
     n.children!.splice(i, 0, fake_ctx);
   }
 
@@ -598,23 +599,49 @@ export class ThriftFormatter extends PureThriftFormatter {
       const comma = <TerminalNode>child.getChild(0);
       const token = <CommonToken> comma.symbol;
       token.text = ",";
+      return;
     }
+
+    const fake_token = new CommonToken(ThriftParser.COMMA, ",");
+    fake_token.line = -1;
+    fake_token.charPositionInLine = -1;
+    fake_token.tokenIndex = -1;
+    const fake_node = new TerminalNode(fake_token);
+    const fake_ctx = new ThriftParserNS.List_separatorContext(n, 0);
+
+    fake_node.setParent(fake_ctx);
+    fake_ctx.addChild(fake_node);
+
+    fake_ctx.setParent(n);
+    n.addChild(fake_ctx);
+  }
+
+  _patch_remove_last_list_separator(n: ParseTree) {
     /*
-        tail = node.children[-1]
-        if isinstance(tail, ThriftParser.List_separatorContext):
-            tail.children[0].symbol.text = ','
+        is_inline_field = isinstance(node, ThriftParser.FieldContext) and \
+            isinstance(node.parent, (ThriftParser.Function_Context, ThriftParser.Throws_listContext))
+        is_inline_node = isinstance(node, ThriftParser.Type_annotationContext)
+
+        if is_inline_field or is_inline_node:
+            self._remove_last_list_separator(node)
+
+    @staticmethod
+    def _remove_last_list_separator(node: ParseTree):
+        if not node.parent:
             return
 
-        fake_token = CommonToken()
-        fake_token.text = ','
-        fake_token.is_fake = True
-        fake_node = TerminalNodeImpl(fake_token)
-        fake_ctx = ThriftParser.List_separatorContext(parser=node.parser)
-        fake_ctx.children = [fake_node]
-        node.children.append(fake_ctx)
+        is_last = False
+        brothers = node.parent.children
+        for i, child in enumerate(brothers):
+            if child is node and i < len(brothers) - 1:
+                if not isinstance(brothers[i + 1], child.__class__):
+                    is_last = True
+                    break
+
+        if is_last and isinstance(node.children[-1], ThriftParser.List_separatorContext):
+            node.children.pop()
     */
   }
-  _patch_remove_last_list_separator(n: ParseTree) {} // eslint-disable-line
 
   _calc_subfields_padding(fields: ParseTree[]) {
     if (fields.length === 0) {

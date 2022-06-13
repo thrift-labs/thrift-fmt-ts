@@ -92,10 +92,12 @@ struct Work {
         assert.equal(thrift, expectThrift);
     })
 
-    it('with with patch field comman', () => {
+    it('with with patch field comma', () => {
         const rawThrift = `
         struct Work {
             1: i32 num1 = 0;
+            2: i32 num2,
+            3: i32 num3
         }`;
         const data = ThriftData.from_string(rawThrift);
         const fmt = new ThriftFormatter(data);
@@ -103,6 +105,8 @@ struct Work {
         const thrift = fmt.format();
 const expectThrift = `struct Work {
     1: required i32 num1 = 0,
+    2: required i32 num2,
+    3: required i32 num3,
 }`
         assert.equal(thrift, expectThrift);
     })
