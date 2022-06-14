@@ -671,11 +671,10 @@ export class ThriftFormatter extends PureThriftFormatter {
     this._field_padding =
       this._calc_subfields_padding(fields) + this._option_indent;
   }
-  after_subfields_hook(fields: ParseTree[]) {
+  after_subfields_hook(_ :ParseTree[]) {
     this._field_padding = 0;
   }
-
-  after_block_node_hook(_: ParseTree) {
+  after_block_node_hook(_ :ParseTree) {
     this._tail_comment();
   }
 
