@@ -110,6 +110,22 @@ const expectThrift = `struct Work {
 }`
         assert.equal(thrift, expectThrift);
     })
+
+    it('with remove last sep in functions', () => {
+        const rawThrift = `
+        service NameService {
+            void hello(1: string name, 2: i32 age,);
+        }
+        `;
+        const data = ThriftData.from_string(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(true, true);
+        const thrift = fmt.format();
+const expectThrift = `service NameService {
+    void hello(1: string name, 2: i32 age),
+}`
+        assert.equal(thrift, expectThrift);
+    })
 });
 
 describe('test ThriftData', () => {

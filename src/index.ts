@@ -1,5 +1,6 @@
 import { CommonToken } from 'antlr4ts';
 import { ParseTree, TerminalNode } from "antlr4ts/tree";
+import { ParserRuleContext } from "antlr4ts/ParserRuleContext";
 import { ThriftData, ThriftParser } from "thrift-parser-ts";
 import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
 
@@ -617,30 +618,37 @@ export class ThriftFormatter extends PureThriftFormatter {
   }
 
   _patch_remove_last_list_separator(n: ParseTree) {
-    /*
-        is_inline_field = isinstance(node, ThriftParser.FieldContext) and \
-            isinstance(node.parent, (ThriftParser.Function_Context, ThriftParser.Throws_listContext))
-        is_inline_node = isinstance(node, ThriftParser.Type_annotationContext)
+    const is_inline_field = n instanceof ThriftParserNS.FieldContext
+      && (n.parent instanceof ThriftParserNS.Function_Context
+        || n.parent instanceof ThriftParserNS.Throws_listContext);
+    const is_inline_node = n instanceof ThriftParserNS.Type_annotationContext;
 
-        if is_inline_field or is_inline_node:
-            self._remove_last_list_separator(node)
+    if (!(is_inline_field || is_inline_node)) {
+      return;
+    }
+    if (n.parent === undefined) {
+      return;
+    }
 
-    @staticmethod
-    def _remove_last_list_separator(node: ParseTree):
-        if not node.parent:
-            return
+    let is_last = false;
+    const brothers = n.parent.children || [];
+    const bortherCount = n.parent.childCount;
+    for (let i = 0; i < bortherCount; i++) {
+      if (brothers[i] === n) {
+        if (i === bortherCount - 1
+          || n.constructor.name !== brothers[i + 1].constructor.name) {
+          is_last = true;
+          break;
+        }
+      }
+    }
 
-        is_last = False
-        brothers = node.parent.children
-        for i, child in enumerate(brothers):
-            if child is node and i < len(brothers) - 1:
-                if not isinstance(brothers[i + 1], child.__class__):
-                    is_last = True
-                    break
-
-        if is_last and isinstance(node.children[-1], ThriftParser.List_separatorContext):
-            node.children.pop()
-    */
+    if (is_last) {
+      const child = n.getChild(n.childCount - 1);
+      if (child instanceof ThriftParserNS.List_separatorContext) {
+        n.removeLastChild();
+      }
+    }
   }
 
   _calc_subfields_padding(fields: ParseTree[]) {
