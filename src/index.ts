@@ -193,7 +193,6 @@ export class PureThriftFormatter {
   }
 
   process_node(node: ParseTree): void {
-    const key = node.constructor.name;
     if (node instanceof TerminalNode) {
       this.TerminalNode(node);
     } else if (node instanceof ThriftParserNS.DocumentContext) {
