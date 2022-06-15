@@ -126,7 +126,7 @@ export class PureThriftFormatter {
       }
       if (index > 0) {
         if (
-          typeof last_node !== typeof node ||
+          last_node!.constructor.name !== node.constructor.name ||
           PureThriftFormatter._is_newline_node(node)
         ) {
           this._newline(2);
