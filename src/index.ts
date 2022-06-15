@@ -194,148 +194,86 @@ export class PureThriftFormatter {
 
   process_node(node: ParseTree): void {
     const key = node.constructor.name;
-    switch (key) {
-      case "TerminalNode":
-        this.TerminalNode(node);
-        break;
-      case "DocumentContext":
-        this.DocumentContext(node);
-        break;
-      case "HeaderContext":
-        this.HeaderContext(node);
-        break;
-      case "DefinitionContext":
-        this.DefinitionContext(node);
-        break;
-      case "Type_ruleContext":
-        this.Type_ruleContext(node);
-        break;
-      case "Enum_fieldContext":
-        this.Enum_fieldContext(node);
-        break;
-      case "Field_ruleContext":
-        this.Field_ruleContext(node);
-        break;
-      case "Type_idContext":
-        this.Type_idContext(node);
-        break;
-      case "Type_listContext":
-        this.Type_listContext(node);
-        break;
-      case "Type_mapContext":
-        this.Type_mapContext(node);
-        break;
-      case "Type_setContext":
-        this.Type_setContext(node);
-        break;
-      case "Type_baseContext":
-        this.Type_baseContext(node);
-        break;
-      case "Type_identifierContext":
-        this.Type_identifierContext(node);
-        break;
-      case "Include_Context":
-        this.Include_Context(node);
-        break;
-      case "Namespace_Context":
-        this.Namespace_Context(node);
-        break;
-      case "Typedef_Context":
-        this.Typedef_Context(node);
-        break;
-      case "Base_typeContext":
-        this.Base_typeContext(node);
-        break;
-      case "Field_typeContext":
-        this.Field_typeContext(node);
-        break;
-      case "Real_base_typeContext":
-        this.Real_base_typeContext(node);
-        break;
-      case "Const_ruleContext":
-        this.Const_ruleContext(node);
-        break;
-      case "Const_valueContext":
-        this.Const_valueContext(node);
-        break;
-      case "IntegerContext":
-        this.IntegerContext(node);
-        break;
-      case "Container_typeContext":
-        this.Container_typeContext(node);
-        break;
-      case "Set_typeContext":
-        this.Set_typeContext(node);
-        break;
-      case "List_typeContext":
-        this.List_typeContext(node);
-        break;
-      case "Cpp_typeContext":
-        this.Cpp_typeContext(node);
-        break;
-      case "Const_mapContext":
-        this.Const_mapContext(node);
-        break;
-      case "Const_map_entryContext":
-        this.Const_map_entryContext(node);
-        break;
-      case "List_separatorContext":
-        this.List_separatorContext(node);
-        break;
-      case "Field_idContext":
-        this.Field_idContext(node);
-        break;
-      case "Field_reqContext":
-        this.Field_reqContext(node);
-        break;
-      case "Map_typeContext":
-        this.Map_typeContext(node);
-        break;
-      case "Const_listContext":
-        this.Const_listContext(node);
-        break;
-      case "Enum_ruleContext":
-        this.Enum_ruleContext(node);
-        break;
-      case "Struct_Context":
-        this.Struct_Context(node);
-        break;
-      case "Union_Context":
-        this.Union_Context(node);
-        break;
-      case "Exception_Context":
-        this.Exception_Context(node);
-        break;
-      case "FieldContext":
-        this.FieldContext(node);
-        break;
-      case "Function_Context":
-        this.Function_Context(node);
-        break;
-      case "OnewayContext":
-        this.OnewayContext(node);
-        break;
-      case "Function_typeContext":
-        this.Function_typeContext(node);
-        break;
-      case "Throws_listContext":
-        this.Throws_listContext(node);
-        break;
-      case "Type_annotationsContext":
-        this.Type_annotationsContext(node);
-        break;
-      case "Type_annotationContext":
-        this.Type_annotationContext(node);
-        break;
-      case "Annotation_valueContext":
-        this.Annotation_valueContext(node);
-        break;
-      case "ServiceContext":
-        this.ServiceContext(node);
-        break;
-      case "SenumContext":
-        this.SenumContext(node);
-        break;
+    if (node instanceof TerminalNode) {
+      this.TerminalNode(node);
+    } else if (node instanceof ThriftParserNS.DocumentContext) {
+      this.DocumentContext(node);
+    } else if (node instanceof ThriftParserNS.HeaderContext) {
+      this.HeaderContext(node);
+    } else if (node instanceof ThriftParserNS.DefinitionContext) {
+      this.DefinitionContext(node);
+    } else if (node instanceof ThriftParserNS.Include_Context) {
+      this.Include_Context(node);
+    } else if (node instanceof ThriftParserNS.Namespace_Context) {
+      this.Namespace_Context(node);
+    } else if (node instanceof ThriftParserNS.Typedef_Context) {
+      this.Typedef_Context(node);
+    } else if (node instanceof ThriftParserNS.Base_typeContext) {
+      this.Base_typeContext(node);
+    } else if (node instanceof ThriftParserNS.Real_base_typeContext) {
+      this.Real_base_typeContext(node);
+    } else if (node instanceof ThriftParserNS.Const_ruleContext) {
+      this.Const_ruleContext(node);
+    } else if (node instanceof ThriftParserNS.Const_valueContext) {
+      this.Const_valueContext(node);
+    } else if (node instanceof ThriftParserNS.IntegerContext) {
+      this.IntegerContext(node);
+    } else if (node instanceof ThriftParserNS.Container_typeContext) {
+      this.Container_typeContext(node);
+    } else if (node instanceof ThriftParserNS.Set_typeContext) {
+      this.Set_typeContext(node);
+    } else if (node instanceof ThriftParserNS.List_typeContext) {
+      this.List_typeContext(node);
+    } else if (node instanceof ThriftParserNS.Cpp_typeContext) {
+      this.Cpp_typeContext(node);
+    } else if (node instanceof ThriftParserNS.Const_mapContext) {
+      this.Const_mapContext(node);
+    } else if (node instanceof ThriftParserNS.Const_map_entryContext) {
+      this.Const_map_entryContext(node);
+    } else if (node instanceof ThriftParserNS.List_separatorContext) {
+      this.List_separatorContext(node);
+    } else if (node instanceof ThriftParserNS.Field_idContext) {
+      this.Field_idContext(node);
+    } else if (node instanceof ThriftParserNS.Field_reqContext) {
+      this.Field_reqContext(node);
+    } else if (node instanceof ThriftParserNS.Field_typeContext) {
+      this.Field_typeContext(node);
+    } else if (node instanceof ThriftParserNS.Map_typeContext) {
+      this.Map_typeContext(node);
+    } else if (node instanceof ThriftParserNS.Const_listContext) {
+      this.Const_listContext(node);
+    } else if (node instanceof ThriftParserNS.Enum_ruleContext) {
+      this.Enum_ruleContext(node);
+    } else if (node instanceof ThriftParserNS.Struct_Context) {
+      this.Struct_Context(node);
+    } else if (node instanceof ThriftParserNS.Union_Context) {
+      this.Union_Context(node);
+    } else if (node instanceof ThriftParserNS.Exception_Context) {
+      this.Exception_Context(node);
+    } else if (node instanceof ThriftParserNS.Enum_fieldContext) {
+      this.Enum_fieldContext(node);
+    } else if (node instanceof ThriftParserNS.FieldContext) {
+      this.FieldContext(node);
+    } else if (node instanceof ThriftParserNS.Function_Context) {
+      this.Function_Context(node);
+    } else if (node instanceof ThriftParserNS.OnewayContext) {
+      this.OnewayContext(node);
+    } else if (node instanceof ThriftParserNS.Function_typeContext) {
+      this.Function_typeContext(node);
+    } else if (node instanceof ThriftParserNS.Throws_listContext) {
+      this.Throws_listContext(node);
+    } else if (node instanceof ThriftParserNS.Type_annotationsContext) {
+      this.Type_annotationsContext(node);
+    } else if (node instanceof ThriftParserNS.Type_annotationContext) {
+      this.Type_annotationContext(node);
+    } else if (node instanceof ThriftParserNS.Annotation_valueContext) {
+      this.Annotation_valueContext(node);
+    } else if (node instanceof ThriftParserNS.ServiceContext) {
+      this.ServiceContext(node);
+    } else if (node instanceof ThriftParserNS.SenumContext) {
+      this.SenumContext(node);
+    } else {
+      console.log(`Unknown node: ${node}`);
     }
   }
 
@@ -376,21 +314,6 @@ export class PureThriftFormatter {
     this.process_node(node.getChild(0));
   };
 
-  Type_ruleContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
-  Field_ruleContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
-  Type_idContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context("");
-  Type_listContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
-  Type_mapContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
-  Type_setContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
-  Type_baseContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
-  Type_identifierContext: NodeProcessFunc =
-    PureThriftFormatter._gen_inline_Context("");
   Include_Context: NodeProcessFunc = PureThriftFormatter._gen_inline_Context();
   Namespace_Context: NodeProcessFunc =
     PureThriftFormatter._gen_inline_Context();
