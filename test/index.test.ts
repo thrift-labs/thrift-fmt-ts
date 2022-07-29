@@ -138,3 +138,17 @@ describe('test ThriftData', () => {
         }
     })
 });
+
+describe('test with complex literal value', () => {
+    it('test double quote', () => {
+        const rawThrift = `const string default_user = "\\'default_user\\'";`;
+        const data = ThriftData.from_string(rawThrift);
+        assert.equal(data.tokens.getTokens().length, 11);
+    })
+
+    it('test single quote', () => {
+        const rawThrift = `const string default_name = '"abc\\'s"' ;`;
+        const data = ThriftData.from_string(rawThrift);
+        assert.equal(data.tokens.getTokens().length, 12);
+    })
+});

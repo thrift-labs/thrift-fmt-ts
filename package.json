@@ -1,6 +1,6 @@
 {
   "name": "thrift-fmt-ts",
-  "version": "1.1.1",
+  "version": "1.1.2-a0",
   "description": "A formatter of Thrift, reimplement of python thrift-fmt",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -34,7 +34,7 @@
     "access": "public"
   },
   "dependencies": {
-    "thrift-parser-ts": "^1.0.4"
+    "thrift-parser-ts": "^1.0.6-a0"
   },
   "devDependencies": {
     "@types/assert": "^1.5.6",
