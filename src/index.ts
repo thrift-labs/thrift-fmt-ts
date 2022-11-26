@@ -13,18 +13,25 @@ export interface Option {
   indent: number,
   patch: boolean,
   comment: boolean,
-  assign_align: boolean,
+  assignAlign: boolean,
 }
 
-export const defaultOption: Option = {
-  indent: 4,
-  patch: true,
-  comment: true,
-  assign_align: false,
+export const newOption = (opt?: Partial<Option>):Option => {
+  const defaultOption: Option = {
+    indent: 4,
+    patch: true,
+    comment: true,
+    assignAlign: false,
+  }
+  return {
+    ...defaultOption,
+    ...opt,
+  }
 }
+
 
 export class PureThriftFormatter {
-  _option: Option = defaultOption;
+  _option: Option = newOption();
 
   _newline_c = 0;
   _indent_s = "";
