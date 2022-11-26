@@ -13,7 +13,7 @@ export interface Option {
   indent: number,
   patch: boolean,
   comment: boolean,
-  assign_align: boolean,
+  assignAlign: boolean,
 }
 
 export const newOption = (opt?: Partial<Option>):Option => {
@@ -21,7 +21,7 @@ export const newOption = (opt?: Partial<Option>):Option => {
     indent: 4,
     patch: true,
     comment: true,
-    assign_align: false,
+    assignAlign: false,
   }
   return {
     ...defaultOption,
