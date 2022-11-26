@@ -10,13 +10,13 @@ type TightFN = (index: number, node: ParseTree) => boolean;
 type NodeProcessFunc = (this: PureThriftFormatter, node: ParseTree) => void;
 
 export interface Option {
-  indent?: number,
-  patch?: boolean,
-  comment?: boolean,
-  assign_align?: boolean,
+  indent: number,
+  patch: boolean,
+  comment: boolean,
+  assign_align: boolean,
 }
 
-const defaultOption: Option = {
+export const defaultOption: Option = {
   indent: 4,
   patch: true,
   comment: true,

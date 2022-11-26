@@ -2,7 +2,7 @@ import 'mocha';
 import assert  from 'assert';
 
 import { ThriftData } from 'thrift-parser-ts';
-import { PureThriftFormatter, ThriftFormatter } from '../src/index'
+import { PureThriftFormatter, ThriftFormatter, defaultOption } from '../src/index'
 
 describe('Test PureThriftFormatter', () => {
     it('test simple ', () => {
@@ -50,7 +50,7 @@ describe('test ThriftFormatter', () => {
         }`;
         const data = ThriftData.from_string(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option({patch: false, comment:true});
+        fmt.option({...defaultOption, patch:false, comment:true});
         const thrift = fmt.format();
 const expectThrift = `include "shared.thrift" // a
 
@@ -77,7 +77,7 @@ struct Work {
         }`;
         const data = ThriftData.from_string(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option({patch: true, comment:true});
+        fmt.option({...defaultOption, patch:true, comment:true});
         const thrift = fmt.format();
 const expectThrift = `include "shared.thrift" // a
 
@@ -101,7 +101,7 @@ struct Work {
         }`;
         const data = ThriftData.from_string(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(true, true);
+        fmt.option({...defaultOption, patch:true, comment:true});
         const thrift = fmt.format();
 const expectThrift = `struct Work {
     1: required i32 num1 = 0,
@@ -119,7 +119,7 @@ const expectThrift = `struct Work {
         `;
         const data = ThriftData.from_string(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(true, true);
+        fmt.option({...defaultOption, patch:true, comment:true});
         const thrift = fmt.format();
 const expectThrift = `service NameService {
     void hello(1: string name, 2: i32 age),
