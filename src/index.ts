@@ -9,10 +9,22 @@ type IsKindFunc = (node: ParseTree) => boolean;
 type TightFN = (index: number, node: ParseTree) => boolean;
 type NodeProcessFunc = (this: PureThriftFormatter, node: ParseTree) => void;
 
-export class PureThriftFormatter {
-  static DEFAULT_INDENT = 4;
+export interface Option {
+  indent: number,
+  patch: boolean,
+  comment: boolean,
+  assign_align: boolean,
+}
 
-  _option_indent: number = PureThriftFormatter.DEFAULT_INDENT;
+export const defaultOption: Option = {
+  indent: 4,
+  patch: true,
+  comment: true,
+  assign_align: false,
+}
+
+export class PureThriftFormatter {
+  _option: Option = defaultOption;
 
   _newline_c = 0;
   _indent_s = "";
@@ -35,10 +47,8 @@ export class PureThriftFormatter {
     return children;
   }
 
-  set_indent(indent: number): void {
-    if (indent > 0) {
-      this._option_indent = indent;
-    }
+  option(opt: Option) {
+    this._option = opt;
   }
 
   _push(text: string) {
@@ -184,7 +194,7 @@ export class PureThriftFormatter {
       );
 
       this.before_subfields_hook(fields);
-      this._block_nodes(fields, " ".repeat(this._option_indent));
+      this._block_nodes(fields, " ".repeat(this._option.indent));
       this.after_subfields_hook(fields);
       this._newline();
 
@@ -438,8 +448,6 @@ export class PureThriftFormatter {
 export class ThriftFormatter extends PureThriftFormatter {
   _data: ThriftData;
   _document: ThriftParserNS.DocumentContext;
-  _option_comment = true;
-  _option_patch = true;
 
   _field_padding = 0;
   _last_token_index = -1;
@@ -450,16 +458,8 @@ export class ThriftFormatter extends PureThriftFormatter {
     this._document = data.document;
   }
 
-  option(comment: boolean, patch: boolean, indent?: number) {
-    this._option_comment = comment;
-    this._option_patch = patch;
-    if (indent !== undefined) {
-      this.set_indent(indent);
-    }
-  }
-
   format(): string {
-    if (this._option_patch) {
+    if (this._option.patch) {
       this.patch();
     }
     return this.format_node(this._document);
@@ -591,7 +591,7 @@ export class ThriftFormatter extends PureThriftFormatter {
 
   before_subfields_hook(fields: ParseTree[]) {
     this._field_padding =
-      this._calc_subfields_padding(fields) + this._option_indent;
+      this._calc_subfields_padding(fields) + this._option.indent;
   }
   after_subfields_hook(_ :ParseTree[]) {
     this._field_padding = 0;
@@ -601,7 +601,7 @@ export class ThriftFormatter extends PureThriftFormatter {
   }
 
   _line_comments(node: TerminalNode) {
-    if (!this._option_comment) {
+    if (!this._option.comment) {
       return;
     }
 
@@ -650,8 +650,23 @@ export class ThriftFormatter extends PureThriftFormatter {
     this._last_token_index = tokenIndex;
   }
 
+  _current_line() {
+    const parts = this._out.split('\n');
+    const cur = parts[parts.length -1];
+    return cur;
+  }
+
+  _padding(padding: number, pad: string = " ") {
+    if (padding > 0) {
+      padding = padding - this._current_line().length;
+      if (padding > 0) {
+        this._append(pad.repeat(padding));
+      }
+    }
+  }
+
   _tail_comment() {
-    if (!this._option_comment) {
+    if (!this._option.comment) {
       return;
     }
     if (this._last_token_index === -1) {
@@ -672,15 +687,8 @@ export class ThriftFormatter extends PureThriftFormatter {
 
     if (comments.length > 0) {
       const comment = comments[0];
-      // align
-      if (this._field_padding > 0) {
-        const parts = this._out.split('\n');
-        const cur_tail = parts[parts.length -1];
-        const padding = this._field_padding - cur_tail.length;
-        if (padding > 0) {
-          this._append(" ".repeat(padding));
-        }
-      }
+      // align comment
+      this._padding(this._field_padding, " ");
       this._append(" ");
       this._append(comment.text!.trim());
       this._push("");
