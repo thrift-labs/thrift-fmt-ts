@@ -50,7 +50,7 @@ describe('test ThriftFormatter', () => {
         }`;
         const data = ThriftData.from_string(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(true, false);
+        fmt.option({patch: false, comment:true});
         const thrift = fmt.format();
 const expectThrift = `include "shared.thrift" // a
 
@@ -77,7 +77,7 @@ struct Work {
         }`;
         const data = ThriftData.from_string(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(true, true);
+        fmt.option({patch: true, comment:true});
         const thrift = fmt.format();
 const expectThrift = `include "shared.thrift" // a
 
