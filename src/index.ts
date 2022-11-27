@@ -3,7 +3,6 @@ import { ParseTree, TerminalNode } from "antlr4ts/tree";
 import { ThriftData, ThriftParser } from "thrift-parser-ts";
 import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
 
-type Nodes = ParseTree[];
 type IsKindFunc = (node: ParseTree) => boolean;
 type TightFN = (index: number, node: ParseTree) => boolean;
 type NodeProcessFunc = (this: PureThriftFormatter, node: ParseTree) => void;
@@ -46,7 +45,7 @@ export const isNeedNewLineNode = (node: ParseTree): boolean => {
   );
 }
 
-export const splitFieldChildrenByAssign = (node: ThriftParserNS.FieldContext|ThriftParserNS.Enum_fieldContext):[Nodes, Nodes] => {
+export const splitFieldChildrenByAssign = (node: ThriftParserNS.FieldContext|ThriftParserNS.Enum_fieldContext):[ParseTree[], ParseTree[]] => {
   /*
     split field's children to [left, right]
     field: '1: required i32 number_a = 0,'
@@ -66,7 +65,7 @@ export const splitFieldChildrenByAssign = (node: ThriftParserNS.FieldContext|Thr
   return [left, right];
 }
 
-export const getNodeChildren = (node: ParseTree): Nodes => {
+export const getNodeChildren = (node: ParseTree): ParseTree[] => {
   const children = [];
   for (let i = 0; i < node.childCount; i++) {
     children.push(node.getChild(i));
@@ -82,6 +81,17 @@ export const walkNode = (root: ParseTree, callback: (node: ParseTree) => void) =
     const children = getNodeChildren(node);
     children.forEach(value => stack.push(value))
   }
+}
+
+export const splitRepeatNodes = (nodes: ParseTree[], kind_fn: IsKindFunc): [ParseTree[], ParseTree[]] => {
+  const children = [];
+  for (const [index, node] of nodes.entries()) {
+    if (!kind_fn(node)) {
+      return [children, nodes.slice(index)];
+    }
+    children.push(node);
+  }
+  return [children, []];
 }
 
 export class PureThriftFormatter {
@@ -130,20 +140,6 @@ export class PureThriftFormatter {
 
   _indent(indent = "") {
     this._indent_s = indent;
-  }
-
-  static _get_repeat_children(
-    nodes: ParseTree[],
-    kind_fn: IsKindFunc
-  ): [ParseTree[], ParseTree[]] {
-    const children = [];
-    for (const [index, node] of nodes.entries()) {
-      if (!kind_fn(node)) {
-        return [children, nodes.slice(index)];
-      }
-      children.push(node);
-    }
-    return [children, []];
   }
 
   after_block_node_hook(_: ParseTree) {}  // eslint-disable-line
@@ -213,10 +209,8 @@ export class PureThriftFormatter {
       this._inline_nodes(children.slice(0, start));
       this._newline();
 
-      const [subblocks, left] = PureThriftFormatter._get_repeat_children(
-        children.slice(start),
-        kind_fn
-      );
+      const leftChildren = children.slice(start);
+      const [subblocks, left] = splitRepeatNodes(leftChildren, kind_fn);
 
       this.before_subblocks_hook(subblocks);
       this._block_nodes(subblocks, " ".repeat(this._option.indent));
