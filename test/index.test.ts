@@ -154,7 +154,7 @@ describe('test with complex literal value', () => {
     })
 });
 
-describe('test ThriftFormatter', () => {
+describe('test ThriftFormatter with assign algin', () => {
     it('with calc padding', () => {
         const rawThrift = `
         struct Work {
@@ -175,5 +175,33 @@ describe('test ThriftFormatter', () => {
         const [p1, p2] = fmt.calc_subblocks_padding(fileds);
         assert.equal(p1, 23)
         assert.equal(p2, 28)
+    })
+
+    it('check assgin format', () => {
+        const rawThrift = `
+        enum NUM {
+            ONE =1,
+            SEVEN = 7,
+        }
+
+        struct Work {
+        1: i32 num1 = 0,
+        2: required string username = "hello", // name
+        }`;
+        const data = ThriftData.from_string(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(newOption({assignAlign: true}))
+        const out = fmt.format();
+
+        assert.equal(out, `enum NUM {
+    ONE   = 1,
+    SEVEN = 7,
+}
+
+struct Work {
+    1: required i32 num1        = 0,
+    2: required string username = "hello",  // name
+}`);
+
     })
 });
