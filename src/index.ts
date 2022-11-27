@@ -647,9 +647,13 @@ export class ThriftFormatter extends PureThriftFormatter {
   }
 
   before_subblocks_hook(subblocks: ParseTree[]) {
-    const [_, comment_padding] = this.calc_subblocks_padding(subblocks)
-    if (comment_padding > 0) {
-      this._field_comment_padding = comment_padding  + this._option.indent;
+    const [assignPadding, commentPadding] = this.calc_subblocks_padding(subblocks)
+    if (assignPadding > 0) {
+      this._field_assign_padding = assignPadding + this._option.indent;
+    }
+
+    if (commentPadding > 0) {
+      this._field_comment_padding = commentPadding  + this._option.indent;
     }
   }
 
@@ -765,6 +769,14 @@ export class ThriftFormatter extends PureThriftFormatter {
     }
 
     this._line_comments(node);
+
+    // padding before field's assgin node.
+    // 1: required string username = "hello";
+    // 2: required i64 age         = 1;
+    if (this._option.assignAlign && this.isFieldOREnumField(node.parent!) && PureThriftFormatter._is_token(node, "=")) {
+      this._padding(this._field_assign_padding, " ");
+    }
+
     super.TerminalNode(node);
   }
 }
