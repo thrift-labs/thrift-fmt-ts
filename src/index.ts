@@ -6,7 +6,7 @@ import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
 type IsKindFunc = (node: ParseTree) => boolean;
 type TightFN = (index: number, node: ParseTree) => boolean;
 type NodeProcessFunc = (this: PureThriftFormatter, node: ParseTree) => void;
-
+type FieldContext = ThriftParserNS.FieldContext|ThriftParserNS.Enum_fieldContext
 export interface Option {
   indent: number,
   patch: boolean,
@@ -45,23 +45,45 @@ export const isNeedNewLineNode = (node: ParseTree): boolean => {
   );
 }
 
-export const splitFieldChildrenByAssign = (node: ThriftParserNS.FieldContext|ThriftParserNS.Enum_fieldContext):[ParseTree[], ParseTree[]] => {
+const splitFieldChildrenByAssign = (node: FieldContext):[ParseTree[], ParseTree[]] => {
+  let i =0;
+  for (;i < node.childCount; i++) {
+    const child = node.getChild(i);
+    if (isToken(child, "=") || (child instanceof ThriftParserNS.List_separatorContext)){
+      break
+    }
+  }
+
+  const left = node.children!.slice(0, i);
+  const right = node.children!.slice(i);
+  return [left, right];
+}
+
+export const splitFieldByAssign = (node: FieldContext):[ParseTree, ParseTree] => {
   /*
     split field's children to [left, right]
     field: '1: required i32 number_a = 0,'
     left:  '1: required i32 number_a'
     right: '= 0,'
   */
-  let i =0;
-  for (;i < node.childCount; i++) {
-    const child = node.getChild(i);
-    if (isToken(child, "=")) {
-      break
-    }
+  let left :FieldContext|undefined = undefined;
+  let right :FieldContext|undefined = undefined;
+
+  if (node instanceof ThriftParserNS.FieldContext) {
+    left = new ThriftParserNS.FieldContext(node.parent, 0);
+    right = new ThriftParserNS.FieldContext(node.parent, 0);
+  } else {
+    left = new ThriftParserNS.Enum_fieldContext(node.parent, 0);
+    right = new ThriftParserNS.Enum_fieldContext(node.parent, 0);
+  }
+  const [leftChildren, rightChildren] = splitFieldChildrenByAssign(node);
+  for (const child of leftChildren) {
+    left.addAnyChild(child)
+  }
+  for (const child of rightChildren) {
+    right.addAnyChild(child)
   }
 
-  const left = node.children!.slice(0, i)!;
-  const right = node.children!.slice(i)!;
   return [left, right];
 }
 
@@ -299,7 +321,7 @@ export class PureThriftFormatter {
       this.SenumContext(node);
     } else {
       const msg = `Unknown node: ${node}`;
-      console.log(msg);
+      // console.log(msg);
       throw msg;
     }
   }
@@ -576,15 +598,9 @@ export class ThriftFormatter extends PureThriftFormatter {
 
       for (const field of fields) {
         const node = <ThriftParserNS.FieldContext | ThriftParserNS.Enum_fieldContext> field;
-        const [left, right] = splitFieldChildrenByAssign(node);
-        const formatChildren = (nodes :ParseTree[]): string => {
-          const fmt = new PureThriftFormatter();
-          fmt._inline_nodes(nodes);
-          return fmt.out;
-        }
-
-        const leftValue = formatChildren(left);
-        const rightValue = formatChildren(right);
+        const [left, right] = splitFieldByAssign(node);
+        const leftValue = new PureThriftFormatter().format_node(left);
+        const rightValue = new PureThriftFormatter().format_node(right);
         leftMaxSize = leftMaxSize> leftValue.length?leftMaxSize: leftValue.length;
         rightMaxSize = rightMaxSize> rightValue.length?rightMaxSize: rightValue.length;
       }
