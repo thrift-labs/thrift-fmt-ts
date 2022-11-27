@@ -2,7 +2,6 @@ import { CommonToken } from 'antlr4ts';
 import { ParseTree, TerminalNode } from "antlr4ts/tree";
 import { ThriftData, ThriftParser } from "thrift-parser-ts";
 import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
-import assert from 'assert';
 
 type Nodes = ParseTree[];
 type IsKindFunc = (node: ParseTree) => boolean;
@@ -29,13 +28,58 @@ export const newOption = (opt?: Partial<Option>):Option => {
   }
 }
 
+export const isToken = (node: ParseTree, text: string): boolean => {
+    return node instanceof TerminalNode && node.symbol.text === text;
+}
+
+export const isEOF = (node: ParseTree): boolean => {
+  return node instanceof TerminalNode && node.symbol.type === ThriftParser.EOF;
+}
+
+export const isNeedNewLineNode = (node: ParseTree): boolean => {
+  return (
+    node instanceof ThriftParserNS.Enum_ruleContext ||
+    node instanceof ThriftParserNS.Struct_Context ||
+    node instanceof ThriftParserNS.Union_Context ||
+    node instanceof ThriftParserNS.Exception_Context ||
+    node instanceof ThriftParserNS.ServiceContext
+  );
+}
+
+export const splitFieldChildrenByAssign = (node: ThriftParserNS.FieldContext|ThriftParserNS.Enum_fieldContext):[Nodes, Nodes] => {
+  /*
+    split field's children to [left, right]
+    field: '1: required i32 number_a = 0,'
+    left:  '1: required i32 number_a'
+    right: '= 0,'
+  */
+  let i =0;
+  for (;i < node.childCount; i++) {
+    const child = node.getChild(i);
+    if (isToken(child, "=")) {
+      break
+    }
+  }
+
+  const left = node.children!.slice(0, i)!;
+  const right = node.children!.slice(i)!;
+  return [left, right];
+}
+
+export const getNodeChildren = (node: ParseTree): Nodes => {
+  const children = [];
+  for (let i = 0; i < node.childCount; i++) {
+    children.push(node.getChild(i));
+  }
+  return children;
+}
 
 export class PureThriftFormatter {
   _option: Option = newOption();
 
   _newline_c = 0;
   _indent_s = "";
-  _out = "";
+  private _out = "";
 
   format_node(node: ParseTree): string {
     this._out = "";
@@ -46,16 +90,12 @@ export class PureThriftFormatter {
     return this._out;
   }
 
-  static getChildren(node: ParseTree): Nodes {
-    const children = [];
-    for (let i = 0; i < node.childCount; i++) {
-      children.push(node.getChild(i));
-    }
-    return children;
-  }
-
   option(opt: Option) {
     this._option = opt;
+  }
+
+  get out(): string {
+    return this._out;
   }
 
   _push(text: string) {
@@ -108,26 +148,6 @@ export class PureThriftFormatter {
     return [children, []];
   }
 
-  static _is_EOF(node: ParseTree): boolean {
-    return (
-      node instanceof TerminalNode && node.symbol.type === ThriftParser.EOF
-    );
-  }
-
-  static _is_token(node: ParseTree, text: string): boolean {
-    return node instanceof TerminalNode && node.symbol.text === text;
-  }
-
-  static _is_newline_node(node: ParseTree): boolean {
-    return (
-      node instanceof ThriftParserNS.Enum_ruleContext ||
-      node instanceof ThriftParserNS.Struct_Context ||
-      node instanceof ThriftParserNS.Union_Context ||
-      node instanceof ThriftParserNS.Exception_Context ||
-      node instanceof ThriftParserNS.ServiceContext
-    );
-  }
-
   after_block_node_hook(_: ParseTree) {}  // eslint-disable-line
   before_block_node_hook(_: ParseTree) {} // eslint-disable-line
 
@@ -144,7 +164,7 @@ export class PureThriftFormatter {
       if (index > 0) {
         if (
           last_node!.constructor.name !== node.constructor.name ||
-          PureThriftFormatter._is_newline_node(node)
+          isNeedNewLineNode(node)
         ) {
           this._newline(2);
         } else {
@@ -191,7 +211,7 @@ export class PureThriftFormatter {
     kind_fn: IsKindFunc
   ): NodeProcessFunc {
     return function (this: PureThriftFormatter, node: ParseTree) {
-      const children = PureThriftFormatter.getChildren(node);
+      const children = getNodeChildren(node);
       this._inline_nodes(children.slice(0, start));
       this._newline();
 
@@ -295,10 +315,8 @@ export class PureThriftFormatter {
     }
   }
 
-  TerminalNode(n: ParseTree) {
-    const node = <TerminalNode>n;
-
-    if (PureThriftFormatter._is_EOF(node)) {
+  TerminalNode(node: TerminalNode) {
+    if (isEOF(node)) {
       return;
     }
 
@@ -314,7 +332,7 @@ export class PureThriftFormatter {
     this: PureThriftFormatter,
     node: ParseTree
   ) {
-    const children = PureThriftFormatter.getChildren(node);
+    const children = getNodeChildren(node);
     this._block_nodes(children);
   };
 
@@ -365,7 +383,7 @@ export class PureThriftFormatter {
 
   Map_typeContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
     " ",
-    (i, n) => !PureThriftFormatter._is_token(n.parent!.getChild(i - 1), ",")
+    (i, n) => !isToken(n.parent!.getChild(i - 1), ",")
   );
 
   Const_listContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
@@ -401,9 +419,9 @@ export class PureThriftFormatter {
   Function_Context: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
     " ",
     (i, n) =>
-      PureThriftFormatter._is_token(n, "(") ||
-      PureThriftFormatter._is_token(n, ")") ||
-      PureThriftFormatter._is_token(n.parent!.getChild(i - 1), "(") ||
+      isToken(n, "(") ||
+      isToken(n, ")") ||
+      isToken(n.parent!.getChild(i - 1), "(") ||
       n instanceof ThriftParserNS.List_separatorContext
   );
   OnewayContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context();
@@ -412,9 +430,9 @@ export class PureThriftFormatter {
   Throws_listContext: NodeProcessFunc = PureThriftFormatter._gen_inline_Context(
     " ",
     (i, n) =>
-      PureThriftFormatter._is_token(n, "(") ||
-      PureThriftFormatter._is_token(n, ")") ||
-      PureThriftFormatter._is_token(n.parent!.getChild(i - 1), "(") ||
+    isToken(n, "(") ||
+    isToken(n, ")") ||
+    isToken(n.parent!.getChild(i - 1), "(") ||
       n instanceof ThriftParserNS.List_separatorContext
   );
   Type_annotationsContext: NodeProcessFunc =
@@ -443,7 +461,7 @@ export class PureThriftFormatter {
     n: ParseTree
   ) {
     const node = <ThriftParserNS.ServiceContext>n;
-    if (PureThriftFormatter._is_token(node.getChild(2), "extends")) {
+    if (isToken(node.getChild(2), "extends")) {
       this.ServiceContext_Extends(node);
     } else {
       this.ServiceContext_Default(node);
@@ -455,12 +473,12 @@ export class PureThriftFormatter {
 }
 
 export class ThriftFormatter extends PureThriftFormatter {
-  _data: ThriftData;
-  _document: ThriftParserNS.DocumentContext;
+  private _data: ThriftData;
+  private _document: ThriftParserNS.DocumentContext;
 
-  _field_comment_padding = 0;
-  _field_assign_padding = 0;
-  _last_token_index = -1;
+  private _field_comment_padding = 0;
+  private _field_assign_padding = 0;
+  private _last_token_index = -1;
 
   constructor(data: ThriftData) {
     super();
@@ -589,26 +607,6 @@ export class ThriftFormatter extends PureThriftFormatter {
       node instanceof ThriftParserNS.Enum_fieldContext)
   }
 
-  private splitFieldByAssign(node: ThriftParserNS.FieldContext|ThriftParserNS.Enum_fieldContext):[ParseTree[], ParseTree[]] {
-    /*
-      split field to [left, right]
-      field: '1: required i32 number_a = 0,'
-      left:  '1: required i32 number_a'
-      right: '= 0,'
-    */
-    let i =0;
-    for (;i < node.childCount; i++) {
-      const child = node.getChild(i);
-      if (PureThriftFormatter._is_token(child, "=")) {
-        break
-      }
-    }
-
-    const leftChildren = node.children!.slice(0, i)!;
-    const rightChildren = node.children!.slice(i)!;
-    return [leftChildren, rightChildren];
-  }
-
   public calc_subblocks_padding(fields: ParseTree[]):[number, number] {
     if (fields.length === 0) {
       return  [0, 0];
@@ -620,12 +618,13 @@ export class ThriftFormatter extends PureThriftFormatter {
 
       for (const field of fields) {
         const node = <ThriftParserNS.FieldContext | ThriftParserNS.Enum_fieldContext> field;
-        const [left, right] = this.splitFieldByAssign(node);
+        const [left, right] = splitFieldChildrenByAssign(node);
         const formatChildren = (nodes :ParseTree[]): string => {
           const fmt = new PureThriftFormatter();
           fmt._inline_nodes(nodes);
-          return fmt._out;
+          return fmt.out;
         }
+
         const leftValue = formatChildren(left);
         const rightValue = formatChildren(right);
         leftMaxSize = leftMaxSize> leftValue.length?leftMaxSize: leftValue.length;
@@ -703,7 +702,7 @@ export class ThriftFormatter extends PureThriftFormatter {
       const last_line = token.line + text.split("\n").length - 1;
       const is_tight =
         token.type == ThriftParser.SL_COMMENT ||
-        PureThriftFormatter._is_EOF(node) ||
+        isEOF(node) ||
         (0 < node.symbol.line - last_line && node.symbol.line - last_line <= 1);
       if (is_tight) {
         this._newline();
@@ -716,7 +715,7 @@ export class ThriftFormatter extends PureThriftFormatter {
   }
 
   _current_line() {
-    const parts = this._out.split('\n');
+    const parts = this.out.split('\n');
     const cur = parts[parts.length -1];
     return cur;
   }
@@ -773,7 +772,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     // padding before field's assgin node.
     // 1: required string username = "hello";
     // 2: required i64 age         = 1;
-    if (this._option.assignAlign && this.isFieldOREnumField(node.parent!) && PureThriftFormatter._is_token(node, "=")) {
+    if (this._option.assignAlign && this.isFieldOREnumField(node.parent!) && isToken(node, "=")) {
       this._padding(this._field_assign_padding, " ");
     }
 
