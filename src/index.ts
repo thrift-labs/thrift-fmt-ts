@@ -604,8 +604,8 @@ export class ThriftFormatter extends PureThriftFormatter {
       }
     }
 
-    const leftChildren = node.children?.slice(0, i)!;
-    const rightChildren = node.children?.slice(i)!;
+    const leftChildren = node.children!.slice(0, i)!;
+    const rightChildren = node.children!.slice(i)!;
     return [leftChildren, rightChildren];
   }
 
