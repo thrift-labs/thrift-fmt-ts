@@ -74,6 +74,16 @@ export const getNodeChildren = (node: ParseTree): Nodes => {
   return children;
 }
 
+export const walkNode = (root: ParseTree, callback: (node: ParseTree) => void) => {
+  const stack: ParseTree[] = [root];
+  while (stack.length > 0) {
+    const node = stack.shift()!;
+    callback(node);
+    const children = getNodeChildren(node);
+    children.forEach(value => stack.push(value))
+  }
+}
+
 export class PureThriftFormatter {
   _option: Option = newOption();
 
@@ -120,18 +130,6 @@ export class PureThriftFormatter {
 
   _indent(indent = "") {
     this._indent_s = indent;
-  }
-
-  static walk_node(root: ParseTree, callback: (node: ParseTree) => void) {
-    const stack: ParseTree[] = [root];
-    while (stack.length > 0) {
-      const node = stack.shift()!;
-      callback(node);
-      for (let i = 0; i < node.childCount; i++) {
-        const child = node.getChild(i);
-        stack.push(child);
-      }
-    }
   }
 
   static _get_repeat_children(
@@ -494,15 +492,9 @@ export class ThriftFormatter extends PureThriftFormatter {
   }
 
   patch() {
-    PureThriftFormatter.walk_node(this._document, this._patch_field_req);
-    PureThriftFormatter.walk_node(
-      this._document,
-      this._patch_field_list_separator
-    );
-    PureThriftFormatter.walk_node(
-      this._document,
-      this._patch_remove_last_list_separator
-    );
+    walkNode(this._document, this._patch_field_req);
+    walkNode(this._document, this._patch_field_list_separator);
+    walkNode(this._document, this._patch_remove_last_list_separator);
   }
 
   _patch_field_req(n: ParseTree) {
