@@ -3,6 +3,7 @@ import assert  from 'assert';
 
 import { ThriftData } from 'thrift-parser-ts';
 import { PureThriftFormatter, ThriftFormatter, newOption } from '../src/index'
+import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
 
 describe('Test PureThriftFormatter', () => {
     it('test simple ', () => {
@@ -150,5 +151,29 @@ describe('test with complex literal value', () => {
         const rawThrift = `const string default_name = '"abc\\'s"' ;`;
         const data = ThriftData.from_string(rawThrift);
         assert.equal(data.tokens.getTokens().length, 12);
+    })
+});
+
+describe('test ThriftFormatter', () => {
+    it('with calc padding', () => {
+        const rawThrift = `
+        struct Work {
+        1: i32 num1 = 0,
+        2: required i32 num2, // num2 for
+        }`;
+        const data = ThriftData.from_string(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(newOption({assignAlign: true}))
+
+        assert.equal(data.document.childCount, 2, data.toString());
+        const structValue = <ThriftParserNS.Struct_Context>data.document.getChild(0).getChild(0);
+        assert.equal(structValue.childCount, 6, structValue.toString());
+        const fileds = structValue.children?.slice(3, 5)!;
+        assert.equal(fileds.length, 2);
+        assert.ok(fileds[0] instanceof ThriftParserNS.FieldContext);
+        assert.ok(fileds[1] instanceof ThriftParserNS.FieldContext);
+        const [p1, p2] = fmt.calc_subblocks_padding(fileds);
+        assert.equal(p1, 23)
+        assert.equal(p2, 28)
     })
 });
