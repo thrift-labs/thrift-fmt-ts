@@ -183,10 +183,10 @@ export class PureThriftFormatter {
     };
   }
 
-  before_subfields_hook(_: ParseTree[]) {} // eslint-disable-line
-  after_subfields_hook(_: ParseTree[]) {}  // eslint-disable-line
+  before_subblocks_hook(_: ParseTree[]) {} // eslint-disable-line
+  after_subblocks_hook(_: ParseTree[]) {}  // eslint-disable-line
 
-  static _gen_subfields_Context(
+  static _gen_subblocks_Context(
     start: number,
     kind_fn: IsKindFunc
   ): NodeProcessFunc {
@@ -195,14 +195,14 @@ export class PureThriftFormatter {
       this._inline_nodes(children.slice(0, start));
       this._newline();
 
-      const [fields, left] = PureThriftFormatter._get_repeat_children(
+      const [subblocks, left] = PureThriftFormatter._get_repeat_children(
         children.slice(start),
         kind_fn
       );
 
-      this.before_subfields_hook(fields);
-      this._block_nodes(fields, " ".repeat(this._option.indent));
-      this.after_subfields_hook(fields);
+      this.before_subblocks_hook(subblocks);
+      this._block_nodes(subblocks, " ".repeat(this._option.indent));
+      this.after_subblocks_hook(subblocks);
       this._newline();
 
       this._inline_nodes(left);
@@ -371,7 +371,7 @@ export class PureThriftFormatter {
     (_, n) => n instanceof ThriftParserNS.List_separatorContext
   );
   Enum_ruleContext: NodeProcessFunc =
-    PureThriftFormatter._gen_subfields_Context(
+    PureThriftFormatter._gen_subblocks_Context(
       3,
       (n) => n instanceof ThriftParserNS.Enum_fieldContext
   );
@@ -379,16 +379,16 @@ export class PureThriftFormatter {
     " ",
     (_, node) => node instanceof ThriftParserNS.List_separatorContext
   );
-  Struct_Context: NodeProcessFunc = PureThriftFormatter._gen_subfields_Context(
+  Struct_Context: NodeProcessFunc = PureThriftFormatter._gen_subblocks_Context(
     3,
     (n) => n instanceof ThriftParserNS.FieldContext
   );
-  Union_Context: NodeProcessFunc = PureThriftFormatter._gen_subfields_Context(
+  Union_Context: NodeProcessFunc = PureThriftFormatter._gen_subblocks_Context(
     3,
     (n) => n instanceof ThriftParserNS.FieldContext
   );
   Exception_Context: NodeProcessFunc =
-    PureThriftFormatter._gen_subfields_Context(
+    PureThriftFormatter._gen_subblocks_Context(
       3,
       (n) => n instanceof ThriftParserNS.FieldContext
     );
@@ -426,12 +426,12 @@ export class PureThriftFormatter {
     PureThriftFormatter._gen_inline_Context();
 
   ServiceContext_Default: NodeProcessFunc =
-    PureThriftFormatter._gen_subfields_Context(
+    PureThriftFormatter._gen_subblocks_Context(
       3,
       (n) => n instanceof ThriftParserNS.Function_Context
     );
   ServiceContext_Extends: NodeProcessFunc =
-    PureThriftFormatter._gen_subfields_Context(
+    PureThriftFormatter._gen_subblocks_Context(
       5,
       (n) => n instanceof ThriftParserNS.Function_Context
     );
@@ -456,7 +456,7 @@ export class ThriftFormatter extends PureThriftFormatter {
   _data: ThriftData;
   _document: ThriftParserNS.DocumentContext;
 
-  _field_padding = 0;
+  _field_comment_padding = 0;
   _last_token_index = -1;
 
   constructor(data: ThriftData) {
@@ -580,7 +580,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     }
   }
 
-  _calc_subfields_padding(fields: ParseTree[]) {
+  _calc_subblocks_padding(fields: ParseTree[]) {
     if (fields.length === 0) {
       return 0;
     }
@@ -588,20 +588,17 @@ export class ThriftFormatter extends PureThriftFormatter {
     let padding = 0;
     for (const field of fields) {
       const field_out = new PureThriftFormatter().format_node(field);
-      const field_padding = field_out.length;
-      if (field_padding > padding) {
-        padding = field_padding;
-      }
+      padding = padding > field_out.length? padding: field_out.length;
     }
     return padding;
   }
 
-  before_subfields_hook(fields: ParseTree[]) {
-    this._field_padding =
-      this._calc_subfields_padding(fields) + this._option.indent;
+  before_subblocks_hook(subblocks: ParseTree[]) {
+    this._field_comment_padding =
+      this._calc_subblocks_padding(subblocks) + this._option.indent;
   }
-  after_subfields_hook(_ :ParseTree[]) {
-    this._field_padding = 0;
+  after_subblocks_hook(_ :ParseTree[]) {
+    this._field_comment_padding = 0;
   }
   after_block_node_hook(_ :ParseTree) {
     this._tail_comment();
@@ -695,7 +692,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     if (comments.length > 0) {
       const comment = comments[0];
       // align comment
-      this._padding(this._field_padding, " ");
+      this._padding(this._field_comment_padding, " ");
       this._append(" ");
       this._append(comment.text!.trim());
       this._push("");
