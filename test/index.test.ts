@@ -173,10 +173,11 @@ describe('test ThriftFormatter with assign algin', () => {
         assert.equal(fileds.length, 2);
         assert.ok(fileds[0] instanceof ThriftParserNS.FieldContext);
         assert.ok(fileds[1] instanceof ThriftParserNS.FieldContext);
-        const [p1, p2] = fmt.calc_subblocks_padding(fileds);
+        const [p1, p2] = fmt.calcSubblocksPadding(fileds);
         assert.equal(p1, 21)
         assert.equal(p2, 25)
     })
+
     it('with calc padding v2', () => {
         const rawThrift = `
         struct Work {
@@ -190,11 +191,11 @@ describe('test ThriftFormatter with assign algin', () => {
         assert.equal(data.document.childCount, 2, data.toString());
         const structValue = <ThriftParserNS.Struct_Context>data.document.getChild(0).getChild(0);
         assert.equal(structValue.childCount, 6, structValue.toString());
-        const fileds = structValue.children!.slice(3, 5)!;
+        const fileds = structValue.children!.slice(3, 5);
         assert.equal(fileds.length, 2);
         assert.ok(fileds[0] instanceof ThriftParserNS.FieldContext);
         assert.ok(fileds[1] instanceof ThriftParserNS.FieldContext);
-        const [p1, p2] = fmt.calc_subblocks_padding(fileds);
+        const [p1, p2] = fmt.calcSubblocksPadding(fileds);
         assert.equal(p1, 24)
         assert.equal(p2, 28)
     })
@@ -249,6 +250,47 @@ struct Work {
     ELEVLEN,
 }`);
 
+    })
+
+    it('check test_field_assign_align_for_enum', () => {
+        const rawThrift = `enum Numberz {
+    ONE = 1,
+    TWO,
+    THREE,
+    FIVE = 5,
+    SIX,
+    EIGHT = 8 }`;
+        const data = ThriftData.from_string(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(newOption({assignAlign: true, indent: 4}))
+        const out = fmt.format();
+
+        assert.equal(out, `enum Numberz {
+    ONE   = 1,
+    TWO,
+    THREE,
+    FIVE  = 5,
+    SIX,
+    EIGHT = 8,
+}`);
+    });
+
+    it('check test_field_assign_align_with_complex', () => {
+        const rawThrift = `enum NUM {
+            ONE =1,
+            SEVEN = 7,
+            ELEVLEN
+        }`;
+        const data = ThriftData.from_string(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(newOption({assignAlign: true, indent: 4, patch: false}))
+        const out = fmt.format();
+
+        assert.equal(out, `enum NUM {
+    ONE     = 1,
+    SEVEN   = 7,
+    ELEVLEN
+}`);
     })
 });
 
