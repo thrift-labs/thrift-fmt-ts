@@ -10,4 +10,7 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
   ],
   ignorePatterns: ['lib/*'],
+  rules: {
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "_" }]
+  }
 };

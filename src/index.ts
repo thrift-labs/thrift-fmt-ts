@@ -27,7 +27,7 @@ export const newOption = (opt?: Partial<Option>):Option => {
   }
 }
 
-export const isToken = (node: ParseTree, text: string): boolean => {
+export const isToken = (node: ParseTree | undefined, text: string): boolean => {
     return node instanceof TerminalNode && node.symbol.text === text;
 }
 
@@ -395,7 +395,7 @@ export class PureThriftFormatter {
   Field_reqContext: NodeProcessFunc = genInlineContext();
   Map_typeContext: NodeProcessFunc = genInlineContext(
     " ",
-    (i, n) => !isToken(n.parent!.getChild(i - 1), ",")
+    (i, n) => !isToken(n.parent?.getChild(i - 1), ",")
   );
   Const_listContext: NodeProcessFunc = genInlineContext(
     " ",
@@ -430,7 +430,7 @@ export class PureThriftFormatter {
     (i, n) =>
       isToken(n, "(") ||
       isToken(n, ")") ||
-      isToken(n.parent!.getChild(i - 1), "(") ||
+      isToken(n.parent?.getChild(i - 1), "(") ||
       n instanceof ThriftParserNS.List_separatorContext
   );
   OnewayContext: NodeProcessFunc = genInlineContext();
@@ -440,7 +440,7 @@ export class PureThriftFormatter {
     (i, n) =>
     isToken(n, "(") ||
     isToken(n, ")") ||
-    isToken(n.parent!.getChild(i - 1), "(") ||
+    isToken(n.parent?.getChild(i - 1), "(") ||
       n instanceof ThriftParserNS.List_separatorContext
   );
   Type_annotationsContext: NodeProcessFunc = genInlineContext();
@@ -467,8 +467,8 @@ export class PureThriftFormatter {
     }
   };
 
-  SenumContext: NodeProcessFunc = function (this: PureThriftFormatter, _: ParseTree
-  ) {}; // eslint-disable-line
+  SenumContext: NodeProcessFunc = function (this: PureThriftFormatter, _:ParseTree) {}; // eslint-disable-line
+
 }
 
 export class ThriftFormatter extends PureThriftFormatter {
@@ -529,7 +529,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     fake_ctx.addChild(fake_node);
 
     fake_ctx.setParent(n);
-    n.children!.splice(i, 0, fake_ctx);
+    n.children?.splice(i, 0, fake_ctx);
   }
 
   _patch_field_list_separator(n: ParseTree) {
@@ -594,7 +594,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     }
   }
 
-  private isFieldOREnumField(node: ParseTree) {
+  private isFieldOREnumField(node: ParseTree|undefined) {
     return (
       node instanceof ThriftParserNS.FieldContext ||
       node instanceof ThriftParserNS.Enum_fieldContext)
@@ -687,10 +687,12 @@ export class ThriftFormatter extends PureThriftFormatter {
       if (token.text === undefined) {
         return;
       }
-      const text = token.text!;
+
       if (this._indent_s.length > 0) {
         this._push(this._indent_s);
       }
+
+      const text = token.text;
       this._push(text.trim());
 
       const last_line = token.line + text.split("\n").length - 1;
@@ -745,10 +747,13 @@ export class ThriftFormatter extends PureThriftFormatter {
 
     if (comments.length > 0) {
       const comment = comments[0];
+      if (comment.text === undefined) {
+        return;
+      }
       // align comment
       this.padding(this._field_comment_padding, " ");
       this._append(" ");
-      this._append(comment.text!.trim());
+      this._append(comment.text.trim());
       this._push("");
       this._last_token_index = comment.tokenIndex;
     }
@@ -766,7 +771,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     // padding before field's assgin node.
     // 1: required string username = "hello";
     // 2: required i64 age         = 1;
-    if (this._option.assignAlign && this.isFieldOREnumField(node.parent!) && isToken(node, "=")) {
+    if (this._option.assignAlign && this.isFieldOREnumField(node.parent) && isToken(node, "=")) {
       this.padding(this._field_assign_padding, " ");
     }
 
