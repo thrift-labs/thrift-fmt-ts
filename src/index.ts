@@ -46,16 +46,25 @@ export const isNeedNewLineNode = (node: ParseTree): boolean => {
 }
 
 const splitFieldChildrenByAssign = (node: FieldContext):[ParseTree[], ParseTree[]] => {
-  let i =0;
+  if (node.children === undefined) {
+    return [[] , []];
+  }
+
+  let i = 0;
+  let curLeft = true;
   for (;i < node.childCount; i++) {
     const child = node.getChild(i);
     if (isToken(child, "=") || (child instanceof ThriftParserNS.List_separatorContext)){
+      curLeft = false;
       break
     }
   }
-
-  const left = node.children!.slice(0, i);
-  const right = node.children!.slice(i);
+  // current child is belong to left.
+  if (curLeft) {
+    i++;
+  }
+  const left = node.children.slice(0, i);
+  const right = node.children.slice(i);
   return [left, right];
 }
 
@@ -98,7 +107,11 @@ export const getNodeChildren = (node: ParseTree): ParseTree[] => {
 export const walkNode = (root: ParseTree, callback: (node: ParseTree) => void) => {
   const stack: ParseTree[] = [root];
   while (stack.length > 0) {
-    const node = stack.shift()!;
+    const node = stack.shift();
+    if (node === undefined) {
+      continue
+    }
+
     callback(node);
     const children = getNodeChildren(node);
     children.forEach(value => stack.push(value))
@@ -209,9 +222,9 @@ export class PureThriftFormatter {
       ) {
         node = node.getChild(0);
       }
-      if (index > 0) {
+      if (index > 0 && last_node !== undefined) {
         if (
-          last_node!.constructor.name !== node.constructor.name ||
+          last_node.constructor.name !== node.constructor.name ||
           isNeedNewLineNode(node)
         ) {
           this._newline(2);
@@ -336,7 +349,7 @@ export class PureThriftFormatter {
       this._indent_s = "";
     }
 
-    this._push(node.symbol.text!);
+    this._push(node.symbol.text || '');
   }
 
   DocumentContext: NodeProcessFunc = function (
@@ -587,7 +600,7 @@ export class ThriftFormatter extends PureThriftFormatter {
       node instanceof ThriftParserNS.Enum_fieldContext)
   }
 
-  public calc_subblocks_padding(fields: ParseTree[]):[number, number] {
+  public calcSubblocksPadding(fields: ParseTree[]):[number, number] {
     if (fields.length === 0) {
       return  [0, 0];
     }
@@ -595,19 +608,26 @@ export class ThriftFormatter extends PureThriftFormatter {
     if (this._option.assignAlign && this.isFieldOREnumField(fields[0])) {
       let leftMaxSize = 0;
       let rightMaxSize = 0;
-
       for (const field of fields) {
         const node = <ThriftParserNS.FieldContext | ThriftParserNS.Enum_fieldContext> field;
         const [left, right] = splitFieldByAssign(node);
-        const leftValue = new PureThriftFormatter().format_node(left);
-        const rightValue = new PureThriftFormatter().format_node(right);
-        leftMaxSize = leftMaxSize> leftValue.length?leftMaxSize: leftValue.length;
-        rightMaxSize = rightMaxSize> rightValue.length?rightMaxSize: rightValue.length;
+        const leftSize = new PureThriftFormatter().format_node(left).length;
+        const rightSize = new PureThriftFormatter().format_node(right).length;
+        leftMaxSize = leftMaxSize > leftSize?leftMaxSize:leftSize;
+        rightMaxSize = rightMaxSize > rightSize?rightMaxSize:rightSize;
       }
 
       // add extra space "xxx = yyy" -> "xxx" + " " + "= yyy"
       const assignPadding = leftMaxSize + 1;
-      const commentPadding = leftMaxSize + 1 + rightMaxSize;
+      /*
+          if it is not list sep, need add extra space
+          case 1 --> "1: bool a = true," ---> "1: bool a" + " " + "= true,"
+          case 2 --> "2: bool b," ---> "2: bool b" + "" + ","
+      */
+      let commentPadding = leftMaxSize + rightMaxSize;
+      if (rightMaxSize > 1) { // case 1
+        commentPadding ++;
+      }
       return [assignPadding, commentPadding];
     } else {
       let commentPadding = 0;
@@ -620,7 +640,7 @@ export class ThriftFormatter extends PureThriftFormatter {
   }
 
   before_subblocks_hook(subblocks: ParseTree[]) {
-    const [assignPadding, commentPadding] = this.calc_subblocks_padding(subblocks)
+    const [assignPadding, commentPadding] = this.calcSubblocksPadding(subblocks)
     if (assignPadding > 0) {
       this._field_assign_padding = assignPadding + this._option.indent;
     }
@@ -694,7 +714,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     return cur;
   }
 
-  _padding(padding: number, pad: string = " ") {
+  private padding(padding: number, pad = " ") {
     if (padding > 0) {
       padding = padding - this._current_line().length;
       if (padding > 0) {
@@ -726,7 +746,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     if (comments.length > 0) {
       const comment = comments[0];
       // align comment
-      this._padding(this._field_comment_padding, " ");
+      this.padding(this._field_comment_padding, " ");
       this._append(" ");
       this._append(comment.text!.trim());
       this._push("");
@@ -747,7 +767,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     // 1: required string username = "hello";
     // 2: required i64 age         = 1;
     if (this._option.assignAlign && this.isFieldOREnumField(node.parent!) && isToken(node, "=")) {
-      this._padding(this._field_assign_padding, " ");
+      this.padding(this._field_assign_padding, " ");
     }
 
     super.TerminalNode(node);
