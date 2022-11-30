@@ -146,7 +146,7 @@ const genInlineContext = (join = " ", tightFn?: TightFN | undefined): NodeProces
 const genSubblocksContext = (start: number, kindFn: IsKindFunc): NodeProcessFunc => {
   return function (this: PureThriftFormatter, node: ParseTree) {
     const children = getNodeChildren(node);
-    this._inline_nodes(children.slice(0, start));
+    this.inlineNode(children.slice(0, start));
     this.newline();
 
     const leftChildren = children.slice(start);
@@ -157,7 +157,7 @@ const genSubblocksContext = (start: number, kindFn: IsKindFunc): NodeProcessFunc
     this.after_subblocks_hook(subblocks);
     this.newline();
 
-    this._inline_nodes(left);
+    this.inlineNode(left);
   };
 }
 
@@ -239,7 +239,7 @@ export class PureThriftFormatter {
     }
   }
 
-  _inline_nodes(nodes: ParseTree[], join = " ") {
+  public inlineNode(nodes: ParseTree[], join = " ") {
     // eslint-disable-next-line
     for (let [index, node] of nodes.entries()) {
       if (index > 0) {
