@@ -34,7 +34,7 @@
     "access": "public"
   },
   "dependencies": {
-    "thrift-parser-ts": "^1.0.6-a1"
+    "thrift-parser-ts": "^1.0.6"
   },
   "devDependencies": {
     "@types/assert": "^1.5.6",
