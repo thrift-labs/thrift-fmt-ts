@@ -118,10 +118,10 @@ export const walkNode = (root: ParseTree, callback: (node: ParseTree) => void) =
   }
 }
 
-export const splitRepeatNodes = (nodes: ParseTree[], kind_fn: IsKindFunc): [ParseTree[], ParseTree[]] => {
+export const splitRepeatNodes = (nodes: ParseTree[], kindFn: IsKindFunc): [ParseTree[], ParseTree[]] => {
   const children = [];
   for (const [index, node] of nodes.entries()) {
-    if (!kind_fn(node)) {
+    if (!kindFn(node)) {
       return [children, nodes.slice(index)];
     }
     children.push(node);
@@ -129,43 +129,42 @@ export const splitRepeatNodes = (nodes: ParseTree[], kind_fn: IsKindFunc): [Pars
   return [children, []];
 }
 
-const genInlineContext = (join = " ", tight_fn?: TightFN | undefined): NodeProcessFunc => {
+const genInlineContext = (join = " ", tightFn?: TightFN | undefined): NodeProcessFunc => {
   return function (this: PureThriftFormatter, node: ParseTree) {
     for (let i = 0; i < node.childCount; i++) {
       const child = node.getChild(i);
       if (i > 0 && join.length > 0) {
-        if (!tight_fn || !tight_fn(i, child)) {
+        if (!tightFn || !tightFn(i, child)) {
           this._push(join);
         }
       }
-      this.process_node(child);
+      this.processNode(child);
     }
   };
 }
 
-const genSubblocksContext = (start: number, kind_fn: IsKindFunc): NodeProcessFunc => {
+const genSubblocksContext = (start: number, kindFn: IsKindFunc): NodeProcessFunc => {
   return function (this: PureThriftFormatter, node: ParseTree) {
     const children = getNodeChildren(node);
     this._inline_nodes(children.slice(0, start));
-    this._newline();
+    this.newline();
 
     const leftChildren = children.slice(start);
-    const [subblocks, left] = splitRepeatNodes(leftChildren, kind_fn);
+    const [subblocks, left] = splitRepeatNodes(leftChildren, kindFn);
 
     this.before_subblocks_hook(subblocks);
     this._block_nodes(subblocks, " ".repeat(this._option.indent));
     this.after_subblocks_hook(subblocks);
-    this._newline();
+    this.newline();
 
     this._inline_nodes(left);
   };
 }
 
 export class PureThriftFormatter {
-  _option: Option = newOption();
-
-  _newline_c = 0;
-  _indent_s = "";
+  protected _option: Option = newOption();
+  protected _indent_s = "";
+  protected _newline_c = 0;
   private _out = "";
 
   format_node(node: ParseTree): string {
@@ -173,7 +172,7 @@ export class PureThriftFormatter {
     this._newline_c = 0;
     this._indent_s = "";
 
-    this.process_node(node);
+    this.processNode(node);
     return this._out;
   }
 
@@ -197,7 +196,7 @@ export class PureThriftFormatter {
     this._out += text;
   }
 
-  _newline(repeat = 1) {
+  newline(repeat = 1) {
     const diff = repeat - this._newline_c;
     if (diff <= 0) {
       return;
@@ -227,14 +226,14 @@ export class PureThriftFormatter {
           last_node.constructor.name !== node.constructor.name ||
           isNeedNewLineNode(node)
         ) {
-          this._newline(2);
+          this.newline(2);
         } else {
-          this._newline();
+          this.newline();
         }
       }
 
       this._indent(indent);
-      this.process_node(node);
+      this.processNode(node);
       this.after_block_node_hook(node);
       last_node = node;
     }
@@ -246,14 +245,14 @@ export class PureThriftFormatter {
       if (index > 0) {
         this._push(join);
       }
-      this.process_node(node);
+      this.processNode(node);
     }
   }
 
   before_subblocks_hook(_: ParseTree[]) {} // eslint-disable-line
   after_subblocks_hook(_: ParseTree[]) {}  // eslint-disable-line
 
-  process_node(node: ParseTree): void {
+  processNode(node: ParseTree): void {
     if (node instanceof TerminalNode) {
       this.TerminalNode(node);
     } else if (node instanceof ThriftParserNS.DocumentContext) {
@@ -364,14 +363,14 @@ export class PureThriftFormatter {
     this: PureThriftFormatter,
     node: ParseTree
   ) {
-    this.process_node(node.getChild(0));
+    this.processNode(node.getChild(0));
   };
 
   DefinitionContext: NodeProcessFunc = function (
     this: PureThriftFormatter,
     node: ParseTree
   ) {
-    this.process_node(node.getChild(0));
+    this.processNode(node.getChild(0));
   };
 
   // TODO: clean this?
@@ -655,10 +654,10 @@ export class ThriftFormatter extends PureThriftFormatter {
     this._field_assign_padding = 0;
   }
   after_block_node_hook(_ :ParseTree) {
-    this._tail_comment();
+    this.addTailComment();
   }
 
-  _line_comments(node: TerminalNode) {
+  private addInlineComments(node: TerminalNode) {
     if (!this._option.comment) {
       return;
     }
@@ -682,7 +681,7 @@ export class ThriftFormatter extends PureThriftFormatter {
 
     for (const token of comments) {
       if (token.tokenIndex > 0 && token.type == ThriftParser.ML_COMMENT) {
-        this._newline(2);
+        this.newline(2);
       }
       if (token.text === undefined) {
         return;
@@ -701,9 +700,9 @@ export class ThriftFormatter extends PureThriftFormatter {
         isEOF(node) ||
         (0 < node.symbol.line - last_line && node.symbol.line - last_line <= 1);
       if (is_tight) {
-        this._newline();
+        this.newline();
       } else {
-        this._newline(2);
+        this.newline(2);
       }
     }
 
@@ -725,7 +724,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     }
   }
 
-  _tail_comment() {
+  private addTailComment() {
     if (!this._option.comment) {
       return;
     }
@@ -763,10 +762,10 @@ export class ThriftFormatter extends PureThriftFormatter {
     const node = <TerminalNode>n;
 
     if (this._newline_c > 0) {
-      this._tail_comment();
+      this.addTailComment();
     }
 
-    this._line_comments(node);
+    this.addInlineComments(node);
 
     // padding before field's assgin node.
     // 1: required string username = "hello";

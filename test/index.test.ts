@@ -134,7 +134,7 @@ describe('test ThriftData', () => {
     it('load invalid thrift', () => {
         const rawThrift = `include    "shared.thrift`;
         try {
-            const data = ThriftData.from_string(rawThrift);
+            ThriftData.from_string(rawThrift);
         } catch (error) {
             assert.ok(error);
         }
@@ -169,7 +169,11 @@ describe('test ThriftFormatter with assign algin', () => {
         assert.equal(data.document.childCount, 2, data.toString());
         const structValue = <ThriftParserNS.Struct_Context>data.document.getChild(0).getChild(0);
         assert.equal(structValue.childCount, 6, structValue.toString());
-        const fileds = structValue.children!.slice(3, 5)!;
+        if (structValue.children === undefined) {
+            assert.fail("structValue.children is undefined")
+            return;
+        }
+        const fileds = structValue.children.slice(3, 5);
         assert.equal(fileds.length, 2);
         assert.ok(fileds[0] instanceof ThriftParserNS.FieldContext);
         assert.ok(fileds[1] instanceof ThriftParserNS.FieldContext);
@@ -191,7 +195,11 @@ describe('test ThriftFormatter with assign algin', () => {
         assert.equal(data.document.childCount, 2, data.toString());
         const structValue = <ThriftParserNS.Struct_Context>data.document.getChild(0).getChild(0);
         assert.equal(structValue.childCount, 6, structValue.toString());
-        const fileds = structValue.children!.slice(3, 5);
+        if (structValue.children === undefined) {
+            assert.fail("structValue.children is undefined")
+            return;
+        }
+        const fileds = structValue.children.slice(3, 5);
         assert.equal(fileds.length, 2);
         assert.ok(fileds[0] instanceof ThriftParserNS.FieldContext);
         assert.ok(fileds[1] instanceof ThriftParserNS.FieldContext);
