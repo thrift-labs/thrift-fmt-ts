@@ -135,7 +135,7 @@ const genInlineContext = (join = " ", tightFn?: TightFN | undefined): NodeProces
       const child = node.getChild(i);
       if (i > 0 && join.length > 0) {
         if (!tightFn || !tightFn(i, child)) {
-          this._push(join);
+          this.append(join);
         }
       }
       this.processNode(child);
@@ -164,12 +164,12 @@ const genSubblocksContext = (start: number, kindFn: IsKindFunc): NodeProcessFunc
 export class PureThriftFormatter {
   protected _option: Option = newOption();
   protected currentIndent = "";
-  protected _newline_c = 0;
+  protected newlineCounter = 0;
   private _out = "";
 
   format_node(node: ParseTree): string {
     this._out = "";
-    this._newline_c = 0;
+    this.newlineCounter = 0;
     this.currentIndent = "";
 
     this.processNode(node);
@@ -184,24 +184,30 @@ export class PureThriftFormatter {
     return this._out;
   }
 
-  _push(text: string) {
-    if (this._newline_c > 0) {
-      this._out += "\n".repeat(this._newline_c);
-      this._newline_c = 0;
-    }
+  private push(text: string) {
     this._out += text;
   }
 
-  _append(text: string) {
-    this._out += text;
+  // if this.newlineCounter was set. `append` will first write newlines and then append
+  protected append(text: string) {
+    if (this.newlineCounter > 0) {
+      this.push("\n".repeat(this.newlineCounter));
+      this.newlineCounter = 0;
+    }
+    this.push(text);
+  }
+
+  // appendCurrentLine append to current line, and  ignore this.newlineCounter.
+  protected appendCurrentLine(text: string) {
+    this.push(text);
   }
 
   newline(repeat = 1) {
-    const diff = repeat - this._newline_c;
+    const diff = repeat - this.newlineCounter;
     if (diff <= 0) {
       return;
     }
-    this._newline_c += diff;
+    this.newlineCounter += diff;
   }
 
   protected setCurrentIndent(indent = '') {
@@ -210,7 +216,7 @@ export class PureThriftFormatter {
 
   protected pushCurrentIndent() {
     if (this.currentIndent.length > 0) {
-      this._push(this.currentIndent);
+      this.append(this.currentIndent);
     }
   }
 
@@ -249,7 +255,7 @@ export class PureThriftFormatter {
     // eslint-disable-next-line
     for (let [index, node] of nodes.entries()) {
       if (index > 0) {
-        this._push(join);
+        this.append(join);
       }
       this.processNode(node);
     }
@@ -352,7 +358,7 @@ export class PureThriftFormatter {
     this.pushCurrentIndent();
     this.setCurrentIndent('');
 
-    this._push(node.symbol.text || '');
+    this.append(node.symbol.text || '');
   }
 
   DocumentContext: NodeProcessFunc = function (
@@ -480,7 +486,7 @@ export class ThriftFormatter extends PureThriftFormatter {
 
   private _field_comment_padding = 0;
   private _field_assign_padding = 0;
-  private _last_token_index = -1;
+  private lastTokenIndex = -1;
 
   constructor(data: ThriftData) {
     super();
@@ -673,7 +679,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     const tokenIndex = node.symbol.tokenIndex;
     const comments = [];
     const tokens = this._data.tokens.getTokens();
-    for (const token of tokens.slice(this._last_token_index + 1)) {
+    for (const token of tokens.slice(this.lastTokenIndex + 1)) {
       if (token.channel != 2) {
         continue;
       }
@@ -694,7 +700,7 @@ export class ThriftFormatter extends PureThriftFormatter {
       this.pushCurrentIndent();
 
       const text = token.text;
-      this._push(text.trim());
+      this.append(text.trim());
 
       const last_line = token.line + text.split("\n").length - 1;
       const is_tight =
@@ -708,7 +714,7 @@ export class ThriftFormatter extends PureThriftFormatter {
       }
     }
 
-    this._last_token_index = tokenIndex;
+    this.lastTokenIndex = tokenIndex;
   }
 
   _current_line() {
@@ -721,7 +727,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     if (padding > 0) {
       padding = padding - this._current_line().length;
       if (padding > 0) {
-        this._append(pad.repeat(padding));
+        this.appendCurrentLine(pad.repeat(padding));
       }
     }
   }
@@ -730,13 +736,13 @@ export class ThriftFormatter extends PureThriftFormatter {
     if (!this._option.comment) {
       return;
     }
-    if (this._last_token_index === -1) {
+    if (this.lastTokenIndex === -1) {
       return;
     }
     const tokens = this._data.tokens.getTokens();
-    const last_token = tokens[this._last_token_index];
+    const last_token = tokens[this.lastTokenIndex];
     const comments = [];
-    for (const token of tokens.slice(this._last_token_index + 1)) {
+    for (const token of tokens.slice(this.lastTokenIndex + 1)) {
       if (token.line != last_token.line) {
         break;
       }
@@ -753,17 +759,17 @@ export class ThriftFormatter extends PureThriftFormatter {
       }
       // align comment
       this.padding(this._field_comment_padding, " ");
-      this._append(" ");
-      this._append(comment.text.trim());
-      this._push("");
-      this._last_token_index = comment.tokenIndex;
+      this.appendCurrentLine(" ");
+      this.appendCurrentLine(comment.text.trim());
+      this.append("");
+      this.lastTokenIndex = comment.tokenIndex;
     }
   }
 
   TerminalNode(n: ParseTree) {
     const node = <TerminalNode>n;
 
-    if (this._newline_c > 0) {
+    if (this.newlineCounter > 0) {
       this.addTailComment();
     }
 
