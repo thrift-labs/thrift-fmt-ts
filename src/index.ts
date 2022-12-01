@@ -113,6 +113,21 @@ export const splitFieldByAssign = (node: FieldContext):[ParseTree, ParseTree] =>
   return [left, right];
 }
 
+const getSplitFieldsLeftRightSize = (fields: ParseTree[]):[number, number] => {
+  let leftMaxSize = 0;
+  let rightMaxSize = 0;
+
+  for (const field of fields) {
+    const node = <FieldContext> field;
+    const [left, right] = splitFieldByAssign(node);
+    const leftSize = new PureThriftFormatter().formatNode(left).length;
+    const rightSize = new PureThriftFormatter().formatNode(right).length;
+    leftMaxSize = leftMaxSize > leftSize?leftMaxSize:leftSize;
+    rightMaxSize = rightMaxSize > rightSize?rightMaxSize:rightSize;
+  }
+  return [leftMaxSize, rightMaxSize];
+}
+
 export const getNodeChildren = (node: ParseTree): ParseTree[] => {
   const children = [];
   for (let i = 0; i < node.childCount; i++) {
@@ -184,7 +199,7 @@ export class PureThriftFormatter {
   protected newlineCounter = 0;
   private _out = '';
 
-  format_node(node: ParseTree): string {
+  formatNode(node: ParseTree): string {
     this._out = '';
     this.newlineCounter = 0;
     this.currentIndent = '';
@@ -219,7 +234,7 @@ export class PureThriftFormatter {
     this.push(text);
   }
 
-  newline(repeat = 1) {
+  protected newline(repeat = 1) {
     const diff = repeat - this.newlineCounter;
     if (diff <= 0) {
       return;
@@ -237,8 +252,8 @@ export class PureThriftFormatter {
     }
   }
 
-  beforeBlockNodeHook(_: ParseTree): void {} // eslint-disable-line
-  afterBlockNodeHook(_: ParseTree): void {}  // eslint-disable-line
+  protected beforeBlockNodeHook(_: ParseTree): void {} // eslint-disable-line
+  protected afterBlockNodeHook(_: ParseTree): void {}  // eslint-disable-line
 
   protected processBlockNodes(nodes: ParseTree[], indent = '') {
     let lastNode: ParseTree | undefined = undefined;
@@ -275,10 +290,10 @@ export class PureThriftFormatter {
     }
   }
 
-  beforeSubblocksHook(_: ParseTree[]) {} // eslint-disable-line
-  afterSubblocksHook(_: ParseTree[]) {}  // eslint-disable-line
+  protected beforeSubblocksHook(_: ParseTree[]) {} // eslint-disable-line
+  protected afterSubblocksHook(_: ParseTree[]) {}  // eslint-disable-line
 
-  processNode(node: ParseTree): void {
+  protected processNode(node: ParseTree): void {
     if (node instanceof TerminalNode) {
       this.TerminalNode(node);
     } else if (node instanceof ThriftParserNS.DocumentContext) {
@@ -364,7 +379,7 @@ export class PureThriftFormatter {
     }
   }
 
-  TerminalNode(node: TerminalNode) {
+  protected TerminalNode(node: TerminalNode) {
     if (isEOF(node)) {
       return;
     }
@@ -375,71 +390,71 @@ export class PureThriftFormatter {
     this.append(node.symbol.text || '');
   }
 
-  DocumentContext: NodeProcessFunc = function (this: PureThriftFormatter, node: ParseTree) {
+  protected DocumentContext: NodeProcessFunc = function (this: PureThriftFormatter, node: ParseTree) {
     const children = getNodeChildren(node);
     this.processBlockNodes(children);
   };
 
-  HeaderContext: NodeProcessFunc = function (this: PureThriftFormatter,node: ParseTree) {
+  protected HeaderContext: NodeProcessFunc = function (this: PureThriftFormatter,node: ParseTree) {
     this.processNode(node.getChild(0));
   };
 
-  DefinitionContext: NodeProcessFunc = function (this: PureThriftFormatter, node: ParseTree) {
+  protected DefinitionContext: NodeProcessFunc = function (this: PureThriftFormatter, node: ParseTree) {
     this.processNode(node.getChild(0));
   };
 
   // TODO: clean this?
-  Include_Context: NodeProcessFunc = genInlineContext();
-  Namespace_Context: NodeProcessFunc = genInlineContext();
-  Typedef_Context: NodeProcessFunc = genInlineContext();
-  Base_typeContext: NodeProcessFunc = genInlineContext();
-  Field_typeContext: NodeProcessFunc = genInlineContext();
-  Real_base_typeContext: NodeProcessFunc = genInlineContext();
-  Const_ruleContext: NodeProcessFunc = genInlineContext();
-  Const_valueContext: NodeProcessFunc = genInlineContext();
-  IntegerContext: NodeProcessFunc = genInlineContext();
-  Container_typeContext: NodeProcessFunc = genInlineContext('');
-  Set_typeContext: NodeProcessFunc = genInlineContext('');
-  List_typeContext: NodeProcessFunc = genInlineContext('');
-  Cpp_typeContext: NodeProcessFunc = genInlineContext();
-  Const_mapContext: NodeProcessFunc = genInlineContext();
-  Const_map_entryContext: NodeProcessFunc = genInlineContext();
-  List_separatorContext: NodeProcessFunc = genInlineContext();
-  Field_idContext: NodeProcessFunc = genInlineContext('');
-  Field_reqContext: NodeProcessFunc = genInlineContext();
-  Map_typeContext: NodeProcessFunc = genInlineContext(
+  protected Include_Context: NodeProcessFunc = genInlineContext();
+  protected Namespace_Context: NodeProcessFunc = genInlineContext();
+  protected Typedef_Context: NodeProcessFunc = genInlineContext();
+  protected Base_typeContext: NodeProcessFunc = genInlineContext();
+  protected Field_typeContext: NodeProcessFunc = genInlineContext();
+  protected Real_base_typeContext: NodeProcessFunc = genInlineContext();
+  protected Const_ruleContext: NodeProcessFunc = genInlineContext();
+  protected Const_valueContext: NodeProcessFunc = genInlineContext();
+  protected IntegerContext: NodeProcessFunc = genInlineContext();
+  protected Container_typeContext: NodeProcessFunc = genInlineContext('');
+  protected Set_typeContext: NodeProcessFunc = genInlineContext('');
+  protected List_typeContext: NodeProcessFunc = genInlineContext('');
+  protected Cpp_typeContext: NodeProcessFunc = genInlineContext();
+  protected Const_mapContext: NodeProcessFunc = genInlineContext();
+  protected Const_map_entryContext: NodeProcessFunc = genInlineContext();
+  protected List_separatorContext: NodeProcessFunc = genInlineContext();
+  protected Field_idContext: NodeProcessFunc = genInlineContext('');
+  protected Field_reqContext: NodeProcessFunc = genInlineContext();
+  protected Map_typeContext: NodeProcessFunc = genInlineContext(
     ' ',
     (i, n) => !isToken(n.parent?.getChild(i - 1), ',')
   );
-  Const_listContext: NodeProcessFunc = genInlineContext(
+  protected Const_listContext: NodeProcessFunc = genInlineContext(
     ' ',
     (_, n) => n instanceof ThriftParserNS.List_separatorContext
   );
-  Enum_ruleContext: NodeProcessFunc = genSubblocksContext(
+  protected Enum_ruleContext: NodeProcessFunc = genSubblocksContext(
     3,
     (n) => n instanceof ThriftParserNS.Enum_fieldContext
   );
-  Enum_fieldContext: NodeProcessFunc = genInlineContext(
+  protected Enum_fieldContext: NodeProcessFunc = genInlineContext(
     ' ',
     (_, node) => node instanceof ThriftParserNS.List_separatorContext
   );
-  Struct_Context: NodeProcessFunc = genSubblocksContext(
+  protected Struct_Context: NodeProcessFunc = genSubblocksContext(
     3,
     (n) => n instanceof ThriftParserNS.FieldContext
   );
-  Union_Context: NodeProcessFunc = genSubblocksContext(
+  protected Union_Context: NodeProcessFunc = genSubblocksContext(
     3,
     (n) => n instanceof ThriftParserNS.FieldContext
   );
-  Exception_Context: NodeProcessFunc = genSubblocksContext(
+  protected Exception_Context: NodeProcessFunc = genSubblocksContext(
     3,
     (n) => n instanceof ThriftParserNS.FieldContext
   );
-  FieldContext: NodeProcessFunc = genInlineContext(
+  protected FieldContext: NodeProcessFunc = genInlineContext(
     ' ',
     (_, n) => n instanceof ThriftParserNS.List_separatorContext
   );
-  Function_Context: NodeProcessFunc = genInlineContext(
+  protected Function_Context: NodeProcessFunc = genInlineContext(
     ' ',
     (i, n) =>
       isToken(n, '(') ||
@@ -447,9 +462,9 @@ export class PureThriftFormatter {
       isToken(n.parent?.getChild(i - 1), '(') ||
       n instanceof ThriftParserNS.List_separatorContext
   );
-  OnewayContext: NodeProcessFunc = genInlineContext();
-  Function_typeContext: NodeProcessFunc = genInlineContext();
-  Throws_listContext: NodeProcessFunc = genInlineContext(
+  protected OnewayContext: NodeProcessFunc = genInlineContext();
+  protected Function_typeContext: NodeProcessFunc = genInlineContext();
+  protected Throws_listContext: NodeProcessFunc = genInlineContext(
     ' ',
     (i, n) =>
     isToken(n, '(') ||
@@ -457,22 +472,21 @@ export class PureThriftFormatter {
     isToken(n.parent?.getChild(i - 1), '(') ||
       n instanceof ThriftParserNS.List_separatorContext
   );
-  Type_annotationsContext: NodeProcessFunc = genInlineContext();
-  Type_annotationContext: NodeProcessFunc = genInlineContext(
+  protected Type_annotationsContext: NodeProcessFunc = genInlineContext();
+  protected Type_annotationContext: NodeProcessFunc = genInlineContext(
     ' ',
     (i: number, n: ParseTree) => n instanceof ThriftParserNS.List_separatorContext
   );
-  Annotation_valueContext: NodeProcessFunc = genInlineContext();
-  ServiceContext_Default: NodeProcessFunc = genSubblocksContext(
+  protected Annotation_valueContext: NodeProcessFunc = genInlineContext();
+  protected ServiceContext_Default: NodeProcessFunc = genSubblocksContext(
     3,
     (n:ParseTree) => n instanceof ThriftParserNS.Function_Context
   );
-  ServiceContext_Extends: NodeProcessFunc = genSubblocksContext(
+  protected ServiceContext_Extends: NodeProcessFunc = genSubblocksContext(
     5,
     (n:ParseTree) => n instanceof ThriftParserNS.Function_Context
   );
-
-  ServiceContext: NodeProcessFunc = function (this: PureThriftFormatter, n: ParseTree) {
+  protected ServiceContext: NodeProcessFunc = function (this: PureThriftFormatter, n: ParseTree) {
     const node = <ThriftParserNS.ServiceContext>n;
     if (isToken(node.getChild(2), 'extends')) {
       this.ServiceContext_Extends(node);
@@ -480,8 +494,7 @@ export class PureThriftFormatter {
       this.ServiceContext_Default(node);
     }
   };
-
-  SenumContext: NodeProcessFunc = function (this: PureThriftFormatter, _:ParseTree) {}; // eslint-disable-line
+  protected SenumContext: NodeProcessFunc = function (this: PureThriftFormatter, _:ParseTree) {}; // eslint-disable-line
 }
 
 export class ThriftFormatter extends PureThriftFormatter {
@@ -503,7 +516,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     if (this._option.patch) {
       this.patch();
     }
-    return this.format_node(this.document);
+    return this.formatNode(this.document);
   }
 
   public patch() {
@@ -545,7 +558,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     n.children?.splice(i, 0, fakeReq); // addChild
   }
 
-  patchFieldListSeparator(n: ParseTree) {
+  private patchFieldListSeparator(n: ParseTree) {
     if (!(n instanceof ThriftParserNS.Enum_fieldContext
       || n instanceof ThriftParserNS.FieldContext
       || n instanceof ThriftParserNS.Function_Context)) {
@@ -612,17 +625,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     }
 
     if (this._option.assignAlign && isFieldOrEnumField(fields[0])) {
-      let leftMaxSize = 0;
-      let rightMaxSize = 0;
-      for (const field of fields) {
-        const node = <ThriftParserNS.FieldContext | ThriftParserNS.Enum_fieldContext> field;
-        const [left, right] = splitFieldByAssign(node);
-        const leftSize = new PureThriftFormatter().format_node(left).length;
-        const rightSize = new PureThriftFormatter().format_node(right).length;
-        leftMaxSize = leftMaxSize > leftSize?leftMaxSize:leftSize;
-        rightMaxSize = rightMaxSize > rightSize?rightMaxSize:rightSize;
-      }
-
+      const [leftMaxSize, rightMaxSize] = getSplitFieldsLeftRightSize(fields);
       // add extra space "xxx = yyy" -> "xxx" + " " + "= yyy"
       const assignPadding = leftMaxSize + 1;
       /*
@@ -638,14 +641,14 @@ export class ThriftFormatter extends PureThriftFormatter {
     } else {
       let commentPadding = 0;
       for (const field of fields) {
-        const fieldFmtValue = new PureThriftFormatter().format_node(field);
-        commentPadding = commentPadding > fieldFmtValue.length? commentPadding: fieldFmtValue.length;
+        const fieldLength = (new PureThriftFormatter().formatNode(field)).length;
+        commentPadding = commentPadding > fieldLength? commentPadding: fieldLength;
       }
       return [0, commentPadding];
     }
   }
 
-  beforeSubblocksHook(subblocks: ParseTree[]) {
+  protected beforeSubblocksHook(subblocks: ParseTree[]) {
     const [assignPadding, commentPadding] = this.calcSubblocksPadding(subblocks)
     if (assignPadding > 0) {
       this.fieldAssignPadding = assignPadding + this._option.indent;
@@ -655,12 +658,12 @@ export class ThriftFormatter extends PureThriftFormatter {
     }
   }
 
-  afterSubblocksHook(_: ParseTree[]): void {
+  protected afterSubblocksHook(_: ParseTree[]): void {
     this.fieldAssignPadding = 0;
     this.fieldCommentPadding = 0;
   }
 
-  afterBlockNodeHook(_: ParseTree): void {
+  protected afterBlockNodeHook(_: ParseTree): void {
     this.addTailComment();
   }
 
@@ -766,7 +769,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     }
   }
 
-  TerminalNode(n: ParseTree) {
+  protected TerminalNode(n: ParseTree) {
     const node = <TerminalNode>n;
 
     if (this.newlineCounter > 0) {

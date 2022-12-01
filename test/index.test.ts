@@ -11,7 +11,7 @@ describe('Test PureThriftFormatter', () => {
         const rawThrift = 'include    "shared.thrift" ';
         const data = ThriftData.fromString(rawThrift);
         const fmt = new PureThriftFormatter();
-        const thrift = fmt.format_node(data.document);
+        const thrift = fmt.formatNode(data.document);
         assert.equal(thrift, 'include "shared.thrift"');
     })
 
@@ -26,7 +26,7 @@ describe('Test PureThriftFormatter', () => {
         }`
         const data = ThriftData.fromString(rawThrift);
         const fmt = new PureThriftFormatter();
-        const thrift = fmt.format_node(data.document);
+        const thrift = fmt.formatNode(data.document);
         assert.equal(thrift, `enum Numberz {
     ONE = 1,
     TWO,
@@ -323,8 +323,8 @@ describe('test some function', () =>{
         assert.equal(left.childCount, 3);
         assert.equal(right.childCount, 3);
 
-        const leftValue = new PureThriftFormatter().format_node(left);
-        const rightValue = new PureThriftFormatter().format_node(right);
+        const leftValue = new PureThriftFormatter().formatNode(left);
+        const rightValue = new PureThriftFormatter().formatNode(right);
         assert.equal(leftValue, `1: i32 num1`)
         assert.equal(rightValue, `= 0,`)
     })
