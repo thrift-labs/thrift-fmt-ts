@@ -146,31 +146,31 @@ const genInlineContext = (join = " ", tightFn?: TightFN | undefined): NodeProces
 const genSubblocksContext = (start: number, kindFn: IsKindFunc): NodeProcessFunc => {
   return function (this: PureThriftFormatter, node: ParseTree) {
     const children = getNodeChildren(node);
-    this.inlineNode(children.slice(0, start));
+    this.processInlineNodes(children.slice(0, start));
     this.newline();
 
     const leftChildren = children.slice(start);
     const [subblocks, left] = splitRepeatNodes(leftChildren, kindFn);
 
     this.before_subblocks_hook(subblocks);
-    this._block_nodes(subblocks, " ".repeat(this._option.indent));
+    this.processBlockNodes(subblocks, " ".repeat(this._option.indent));
     this.after_subblocks_hook(subblocks);
     this.newline();
 
-    this.inlineNode(left);
+    this.processInlineNodes(left);
   };
 }
 
 export class PureThriftFormatter {
   protected _option: Option = newOption();
-  protected _indent_s = "";
+  protected currentIndent = "";
   protected _newline_c = 0;
   private _out = "";
 
   format_node(node: ParseTree): string {
     this._out = "";
     this._newline_c = 0;
-    this._indent_s = "";
+    this.currentIndent = "";
 
     this.processNode(node);
     return this._out;
@@ -204,14 +204,20 @@ export class PureThriftFormatter {
     this._newline_c += diff;
   }
 
-  _indent(indent = "") {
-    this._indent_s = indent;
+  protected setCurrentIndent(indent = '') {
+    this.currentIndent = indent;
+  }
+
+  protected pushCurrentIndent() {
+    if (this.currentIndent.length > 0) {
+      this._push(this.currentIndent);
+    }
   }
 
   after_block_node_hook(_: ParseTree) {}  // eslint-disable-line
   before_block_node_hook(_: ParseTree) {} // eslint-disable-line
 
-  _block_nodes(nodes: ParseTree[], indent = "") {
+  protected processBlockNodes(nodes: ParseTree[], indent = "") {
     let last_node: ParseTree | undefined = undefined;
     // eslint-disable-next-line
     for (let [index, node] of nodes.entries()) {
@@ -232,14 +238,14 @@ export class PureThriftFormatter {
         }
       }
 
-      this._indent(indent);
+      this.setCurrentIndent(indent);
       this.processNode(node);
       this.after_block_node_hook(node);
       last_node = node;
     }
   }
 
-  public inlineNode(nodes: ParseTree[], join = " ") {
+  protected processInlineNodes(nodes: ParseTree[], join = " ") {
     // eslint-disable-next-line
     for (let [index, node] of nodes.entries()) {
       if (index > 0) {
@@ -343,10 +349,8 @@ export class PureThriftFormatter {
       return;
     }
 
-    if (this._indent_s.length > 0) {
-      this._push(this._indent_s);
-      this._indent_s = "";
-    }
+    this.pushCurrentIndent();
+    this.setCurrentIndent('');
 
     this._push(node.symbol.text || '');
   }
@@ -356,7 +360,7 @@ export class PureThriftFormatter {
     node: ParseTree
   ) {
     const children = getNodeChildren(node);
-    this._block_nodes(children);
+    this.processBlockNodes(children);
   };
 
   HeaderContext: NodeProcessFunc = function (
@@ -445,16 +449,16 @@ export class PureThriftFormatter {
   Type_annotationsContext: NodeProcessFunc = genInlineContext();
   Type_annotationContext: NodeProcessFunc = genInlineContext(
       " ",
-      (i, n) => n instanceof ThriftParserNS.List_separatorContext
+      (i: number, n: ParseTree) => n instanceof ThriftParserNS.List_separatorContext
     );
   Annotation_valueContext: NodeProcessFunc = genInlineContext();
   ServiceContext_Default: NodeProcessFunc = genSubblocksContext(
     3,
-    (n) => n instanceof ThriftParserNS.Function_Context
+    (n:ParseTree) => n instanceof ThriftParserNS.Function_Context
   );
   ServiceContext_Extends: NodeProcessFunc = genSubblocksContext(
     5,
-    (n) => n instanceof ThriftParserNS.Function_Context
+    (n:ParseTree) => n instanceof ThriftParserNS.Function_Context
   );
 
   ServiceContext: NodeProcessFunc = function (this: PureThriftFormatter, n: ParseTree) {
@@ -492,12 +496,12 @@ export class ThriftFormatter extends PureThriftFormatter {
   }
 
   patch() {
-    walkNode(this._document, this._patch_field_req);
+    walkNode(this._document, this.patchFieldReq);
     walkNode(this._document, this._patch_field_list_separator);
     walkNode(this._document, this._patch_remove_last_list_separator);
   }
 
-  _patch_field_req(n: ParseTree) {
+  private patchFieldReq(n: ParseTree) {
     if (!(n instanceof ThriftParserNS.FieldContext)) {
       return;
     }
@@ -517,18 +521,17 @@ export class ThriftFormatter extends PureThriftFormatter {
       }
     }
 
-    const fake_token = new CommonToken(ThriftParser.T__20, "required");
-    fake_token.line = -1;
-    fake_token.charPositionInLine = -1;
-    fake_token.tokenIndex = -1;
-    const fake_node = new TerminalNode(fake_token);
-    const fake_ctx = new ThriftParserNS.Field_reqContext(n, 0);
+    const fakeToken = new CommonToken(ThriftParser.T__20, "required");
+    fakeToken.line = -1;
+    fakeToken.charPositionInLine = -1;
+    fakeToken.tokenIndex = -1;
+    const fakeNode = new TerminalNode(fakeToken);
+    const fakeReq = new ThriftParserNS.Field_reqContext(n, 0);
 
-    fake_node.setParent(fake_ctx);
-    fake_ctx.addChild(fake_node);
-
-    fake_ctx.setParent(n);
-    n.children?.splice(i, 0, fake_ctx);
+    fakeNode.setParent(fakeReq);
+    fakeReq.addChild(fakeNode);
+    fakeReq.setParent(n);
+    n.children?.splice(i, 0, fakeReq); // addChild
   }
 
   _patch_field_list_separator(n: ParseTree) {
@@ -687,9 +690,8 @@ export class ThriftFormatter extends PureThriftFormatter {
         return;
       }
 
-      if (this._indent_s.length > 0) {
-        this._push(this._indent_s);
-      }
+      // TODO: 确认是否需要 clean indent;
+      this.pushCurrentIndent();
 
       const text = token.text;
       this._push(text.trim());
