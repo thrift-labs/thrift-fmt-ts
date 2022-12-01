@@ -9,7 +9,7 @@ import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
 describe('Test PureThriftFormatter', () => {
     it('test simple ', () => {
         const rawThrift = 'include    "shared.thrift" ';
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new PureThriftFormatter();
         const thrift = fmt.format_node(data.document);
         assert.equal(thrift, 'include "shared.thrift"');
@@ -24,7 +24,7 @@ describe('Test PureThriftFormatter', () => {
             SIX ,
             EIGHT = 8
         }`
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new PureThriftFormatter();
         const thrift = fmt.format_node(data.document);
         assert.equal(thrift, `enum Numberz {
@@ -50,7 +50,7 @@ describe('test ThriftFormatter', () => {
             4: optional string comment,
             5: map<string,list<string>> tags, //hello
         }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({patch:false, comment:true}));
         const thrift = fmt.format();
@@ -77,7 +77,7 @@ struct Work {
             4: optional string comment,
             5: map<string,list<string>> tags, //hello
         }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({patch:true, comment:true}));
         const thrift = fmt.format();
@@ -101,7 +101,7 @@ struct Work {
             2: i32 number2,
             3: i32 num3
         }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({patch:true, comment:true}));
         const thrift = fmt.format();
@@ -119,7 +119,7 @@ const expectThrift = `struct Work {
             void hello(1: string name, 2: i32 age,);
         }
         `;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({patch:true, comment:true}));
         const thrift = fmt.format();
@@ -134,7 +134,7 @@ describe('test ThriftData', () => {
     it('load invalid thrift', () => {
         const rawThrift = `include    "shared.thrift`;
         try {
-            ThriftData.from_string(rawThrift);
+            ThriftData.fromString(rawThrift);
         } catch (error) {
             assert.ok(error);
         }
@@ -144,13 +144,13 @@ describe('test ThriftData', () => {
 describe('test with complex literal value', () => {
     it('test double quote', () => {
         const rawThrift = `const string default_user = "\\'default_user\\'";`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         assert.equal(data.tokens.getTokens().length, 11);
     })
 
     it('test single quote', () => {
         const rawThrift = `const string default_name = '"abc\\'s"' ;`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         assert.equal(data.tokens.getTokens().length, 12);
     })
 });
@@ -162,7 +162,7 @@ describe('test ThriftFormatter with assign algin', () => {
         1: i32 num1 = 0,
         2: required i32 num2, // num2 for
         }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({assignAlign: true}))
 
@@ -188,7 +188,7 @@ describe('test ThriftFormatter with assign algin', () => {
         1: i32 num1 = 0,
         2: required i32 numbers, // num2 for
         }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({assignAlign: true}))
 
@@ -221,7 +221,7 @@ describe('test ThriftFormatter with assign algin', () => {
         2: required string username = "hello", // name
         3: optional list<map<string, bool>> attrs;
         }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({assignAlign: true}))
         const out = fmt.format();
@@ -247,7 +247,7 @@ struct Work {
             SEVEN = 7,
             ELEVLEN,
         }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({assignAlign: true}))
         const out = fmt.format();
@@ -268,7 +268,7 @@ struct Work {
     FIVE = 5,
     SIX,
     EIGHT = 8 }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({assignAlign: true, indent: 4}))
         const out = fmt.format();
@@ -289,7 +289,7 @@ struct Work {
             SEVEN = 7,
             ELEVLEN
         }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({assignAlign: true, indent: 4, patch: false}))
         const out = fmt.format();
@@ -309,7 +309,7 @@ describe('test some function', () =>{
         1: i32 num1 = 0,
         2: required i32 numbers, // num2 for
         }`;
-        const data = ThriftData.from_string(rawThrift);
+        const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
         fmt.option(newOption({assignAlign: true}))
 

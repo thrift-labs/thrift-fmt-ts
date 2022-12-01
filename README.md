@@ -11,7 +11,7 @@ import { ThriftData } from 'thrift-parser-ts';
 import { ThriftFormatter, newOption } from 'thrift-fmt-ts'
 
 
-const data = ThriftData.from_string(`const string name="hello"`);
+const data = ThriftData.fromString(`const string name="hello"`);
 const fomatter = new ThriftFormatter(data);
 fomatter.option(newOption());
 const newContent = fomatter.format();

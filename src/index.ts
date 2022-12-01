@@ -1,6 +1,6 @@
 import { CommonToken } from 'antlr4ts';
 import { ParseTree, TerminalNode } from "antlr4ts/tree";
-import { ThriftData, ThriftParser } from "thrift-parser-ts";
+import { ThriftData, ThriftParser, CommentChannel } from "thrift-parser-ts";
 import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
 
 type IsKindFunc = (node: ParseTree) => boolean;
@@ -481,7 +481,7 @@ export class PureThriftFormatter {
 }
 
 export class ThriftFormatter extends PureThriftFormatter {
-  private _data: ThriftData;
+  private data: ThriftData;
   private _document: ThriftParserNS.DocumentContext;
 
   private _field_comment_padding = 0;
@@ -490,7 +490,7 @@ export class ThriftFormatter extends PureThriftFormatter {
 
   constructor(data: ThriftData) {
     super();
-    this._data = data;
+    this.data = data;
     this._document = data.document;
   }
 
@@ -678,9 +678,9 @@ export class ThriftFormatter extends PureThriftFormatter {
 
     const tokenIndex = node.symbol.tokenIndex;
     const comments = [];
-    const tokens = this._data.tokens.getTokens();
+    const tokens = this.data.tokens.getTokens();
     for (const token of tokens.slice(this.lastTokenIndex + 1)) {
-      if (token.channel != 2) {
+      if (token.channel != CommentChannel) {
         continue;
       }
       if (token.tokenIndex < tokenIndex) {
@@ -702,12 +702,14 @@ export class ThriftFormatter extends PureThriftFormatter {
       const text = token.text;
       this.append(text.trim());
 
-      const last_line = token.line + text.split("\n").length - 1;
-      const is_tight =
+      const lastLine = token.line + text.split("\n").length - 1;
+      const lineDiff = node.symbol.line - lastLine;
+      const isTight =
         token.type == ThriftParser.SL_COMMENT ||
         isEOF(node) ||
-        (0 < node.symbol.line - last_line && node.symbol.line - last_line <= 1);
-      if (is_tight) {
+        (0 < lineDiff && lineDiff <= 1);
+
+      if (isTight) {
         this.newline();
       } else {
         this.newline(2);
@@ -717,7 +719,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     this.lastTokenIndex = tokenIndex;
   }
 
-  _current_line() {
+  protected get currentLine() :string {
     const parts = this.out.split('\n');
     const cur = parts[parts.length -1];
     return cur;
@@ -725,7 +727,7 @@ export class ThriftFormatter extends PureThriftFormatter {
 
   private padding(padding: number, pad = " ") {
     if (padding > 0) {
-      padding = padding - this._current_line().length;
+      padding = padding - this.currentLine.length;
       if (padding > 0) {
         this.appendCurrentLine(pad.repeat(padding));
       }
@@ -739,11 +741,11 @@ export class ThriftFormatter extends PureThriftFormatter {
     if (this.lastTokenIndex === -1) {
       return;
     }
-    const tokens = this._data.tokens.getTokens();
-    const last_token = tokens[this.lastTokenIndex];
+    const tokens = this.data.tokens.getTokens();
+    const lastToken = tokens[this.lastTokenIndex];
     const comments = [];
     for (const token of tokens.slice(this.lastTokenIndex + 1)) {
-      if (token.line != last_token.line) {
+      if (token.line != lastToken.line) {
         break;
       }
       if (token.channel != 2) {

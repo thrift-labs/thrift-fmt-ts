@@ -13,7 +13,8 @@
     "clean": "rm -rf ./lib/",
     "lint": "eslint .",
     "test": "mocha -r ts-node/register 'test/*.ts'",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run clean && npm run build && npm run lint"
   },
   "repository": {
     "type": "git",
@@ -34,7 +35,7 @@
     "access": "public"
   },
   "dependencies": {
-    "thrift-parser-ts": "^1.0.6"
+    "thrift-parser-ts": "^1.0.8"
   },
   "devDependencies": {
     "@types/assert": "^1.5.6",
