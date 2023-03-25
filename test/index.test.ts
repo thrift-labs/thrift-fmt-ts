@@ -3,7 +3,7 @@ import assert  from 'assert';
 
 import { ThriftData } from 'thrift-parser-ts';
 import { PureThriftFormatter, ThriftFormatter, newOption } from '../src/index'
-import { splitFieldByAssign } from '../src/index'
+import { splitFieldByAssign, calcFieldAlignByAssignPadding } from '../src/index'
 import * as ThriftParserNS from "thrift-parser-ts/lib/ThriftParser";
 
 describe('Test PureThriftFormatter', () => {
@@ -52,7 +52,7 @@ describe('test ThriftFormatter', () => {
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({patch:false, comment:true}));
+        fmt.option(newOption({patchRequired:false, patchSeparator: false, keepComment:true}));
         const thrift = fmt.format();
 const expectThrift = `include "shared.thrift" // a
 
@@ -79,7 +79,7 @@ struct Work {
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({patch:true, comment:true}));
+        fmt.option(newOption({patchRequired:true, patchSeparator: true, keepComment:true}));
         const thrift = fmt.format();
 const expectThrift = `include "shared.thrift" // a
 
@@ -103,7 +103,7 @@ struct Work {
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({patch:true, comment:true}));
+        fmt.option(newOption({patchRequired:true, patchSeparator: true, keepComment:true}));
         const thrift = fmt.format();
 const expectThrift = `struct Work {
     1: required i32 num1 = 0,
@@ -121,7 +121,7 @@ const expectThrift = `struct Work {
         `;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({patch:true, comment:true}));
+        fmt.option(newOption({patchRequired:true, patchSeparator: true, keepComment:true}));
         const thrift = fmt.format();
 const expectThrift = `service NameService {
     void hello(1: string name, 2: i32 age),
@@ -164,7 +164,7 @@ describe('test ThriftFormatter with assign algin', () => {
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({assignAlign: true}))
+        fmt.option(newOption({alignByAssign: true}))
 
         assert.equal(data.document.childCount, 2, data.toString());
         const structValue = <ThriftParserNS.Struct_Context>data.document.getChild(0).getChild(0);
@@ -177,7 +177,7 @@ describe('test ThriftFormatter with assign algin', () => {
         assert.equal(fileds.length, 2);
         assert.ok(fileds[0] instanceof ThriftParserNS.FieldContext);
         assert.ok(fileds[1] instanceof ThriftParserNS.FieldContext);
-        const [p1, p2] = fmt.calcSubblocksPadding(fileds);
+        const [p1, p2] = calcFieldAlignByAssignPadding(fileds);
         assert.equal(p1, 21)
         assert.equal(p2, 25)
     })
@@ -190,7 +190,7 @@ describe('test ThriftFormatter with assign algin', () => {
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({assignAlign: true}))
+        fmt.option(newOption({alignByAssign: true}))
 
         assert.equal(data.document.childCount, 2, data.toString());
         const structValue = <ThriftParserNS.Struct_Context>data.document.getChild(0).getChild(0);
@@ -203,7 +203,7 @@ describe('test ThriftFormatter with assign algin', () => {
         assert.equal(fileds.length, 2);
         assert.ok(fileds[0] instanceof ThriftParserNS.FieldContext);
         assert.ok(fileds[1] instanceof ThriftParserNS.FieldContext);
-        const [p1, p2] = fmt.calcSubblocksPadding(fileds);
+        const [p1, p2] = calcFieldAlignByAssignPadding(fileds);
         assert.equal(p1, 24)
         assert.equal(p2, 28)
     })
@@ -223,7 +223,7 @@ describe('test ThriftFormatter with assign algin', () => {
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({assignAlign: true}))
+        fmt.option(newOption({alignByAssign: true}))
         const out = fmt.format();
 
         assert.equal(out, `enum NUM {
@@ -249,7 +249,7 @@ struct Work {
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({assignAlign: true}))
+        fmt.option(newOption({alignByAssign: true}))
         const out = fmt.format();
 
         assert.equal(out, `enum NUM {
@@ -270,7 +270,7 @@ struct Work {
     EIGHT = 8 }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({assignAlign: true, indent: 4}))
+        fmt.option(newOption({alignByAssign: true, indent: 4}))
         const out = fmt.format();
 
         assert.equal(out, `enum Numberz {
@@ -291,7 +291,7 @@ struct Work {
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({assignAlign: true, indent: 4, patch: false}))
+        fmt.option(newOption({alignByAssign: true, indent: 4, patchRequired: false, patchSeparator: false}))
         const out = fmt.format();
 
         assert.equal(out, `enum NUM {
@@ -311,7 +311,7 @@ describe('test some function', () =>{
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({assignAlign: true}))
+        fmt.option(newOption({alignByAssign: true}))
 
         assert.equal(data.document.childCount, 2, data.toString());
         const structValue = <ThriftParserNS.Struct_Context>data.document.getChild(0).getChild(0);

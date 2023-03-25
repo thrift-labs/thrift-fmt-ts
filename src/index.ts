@@ -607,7 +607,7 @@ const calcSubBlocksCommentPadding = (subblocks: ParseTree[]): number => {
   return padding;
 }
 
-const calcFieldAlignByAssignPadding = (fields: ParseTree[]): [number, number] => {
+export const calcFieldAlignByAssignPadding = (fields: ParseTree[]): [number, number] => {
   if (fields.length === 0 || !isFieldOrEnumField(fields[0]) ) {
     return  [0, 0];
   }
