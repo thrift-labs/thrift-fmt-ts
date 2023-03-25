@@ -665,24 +665,24 @@ const calcFieldAlignByFieldPaddingMap = (fields: ParseTree[]):[Map<string, numbe
       const level = nameLevels.get(getFieldChildName(child))! // eslint-disable-line
       const length = new PureThriftFormatter().formatNode(child).length
 
-      levelLength.set(level, Math.max(levelLength.get(level)||0, length))
+      levelLength.set(level, Math.max(levelLength.get(level) || 0, length))
     }
   }
 
   const sep = new ThriftParserNS.List_separatorContext(undefined, 0);
   const levelPadding: Map<number, number> = new Map();
   for (const [level, _] of levelLength) {
+    let padding = level;
     if (level === nameLevels.get(getFieldChildName(sep))) {
-      levelPadding.set(level, level-1)
-    } else {
-      levelPadding.set(level, level)
+      padding -= 1;
     }
 
     let i = 0;
     for (;i < level; i++) {
-      const padding = levelPadding.get(level)! + levelLength.get(level)! // eslint-disable-line
-      levelPadding.set(level, padding)
+      padding += levelLength.get(i) || 0;
     }
+
+    levelPadding.set(level, padding)
   }
 
   for (const [name, level] of nameLevels) {
