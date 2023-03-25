@@ -23,7 +23,7 @@ export const newOption = (opt?: Partial<Option>):Option => {
     patchRequired: true,
     patchSeparator: true,
     keepComment: true,
-    alignByAssign: true,
+    alignByAssign: false,
     alignByField: false,
   }
   return {
