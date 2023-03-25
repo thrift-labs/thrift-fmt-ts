@@ -103,7 +103,7 @@ struct Work {
         }`;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({patchRequired:true, patchSeparator: true, keepComment:true, alignByAssign: false}));
+        fmt.option(newOption({patchRequired:true, patchSeparator: true, keepComment:true}));
         const thrift = fmt.format();
 const expectThrift = `struct Work {
     1: required i32 num1 = 0,
@@ -121,7 +121,7 @@ const expectThrift = `struct Work {
         `;
         const data = ThriftData.fromString(rawThrift);
         const fmt = new ThriftFormatter(data);
-        fmt.option(newOption({patchRequired:true, patchSeparator: true, keepComment:true, alignByAssign: false}));
+        fmt.option(newOption({patchRequired:true, patchSeparator: true, keepComment:true}));
         const thrift = fmt.format();
 const expectThrift = `service NameService {
     void hello(1: string name, 2: i32 age),
