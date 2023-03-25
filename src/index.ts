@@ -6,7 +6,7 @@ import * as ThriftParserNS from 'thrift-parser-ts/lib/ThriftParser';
 type IsKindFunc = (node: ParseTree) => boolean;
 type TightFN = (index: number, node: ParseTree) => boolean;
 type NodeProcessFunc = (this: PureThriftFormatter, node: ParseTree) => void;
-type FieldContext = ThriftParserNS.FieldContext|ThriftParserNS.Enum_fieldContext
+type FieldContext = ThriftParserNS.FieldContext | ThriftParserNS.Enum_fieldContext;
 
 export interface Option {
   indent: number,
@@ -40,8 +40,14 @@ export const isEOF = (node: ParseTree): boolean => {
   return node instanceof TerminalNode && node.symbol.type === ThriftParser.EOF;
 }
 
+const fakeNodeLineNo = -1;
+
+const isFakeNode = (node: TerminalNode): boolean => {
+  return node.symbol.line === fakeNodeLineNo;
+}
+
 const notSameClass = (a:ParseTree, b: ParseTree): boolean => {
-  return a.constructor.name !== b.constructor.name
+  return a.constructor.name !== b.constructor.name;
 }
 
 const isNeedNewLineNode = (node: ParseTree): boolean => {
@@ -64,7 +70,8 @@ const isFunctionOrThrowsListNode = (node: ParseTree): boolean => {
 const isFieldOrEnumField = (node: ParseTree|undefined): boolean => {
   return (
     node instanceof ThriftParserNS.FieldContext ||
-    node instanceof ThriftParserNS.Enum_fieldContext)
+    node instanceof ThriftParserNS.Enum_fieldContext
+  );
 }
 
 const splitFieldChildrenByAssign = (node: FieldContext):[ParseTree[], ParseTree[]] => {
@@ -108,10 +115,10 @@ export const splitFieldByAssign = (node: FieldContext):[ParseTree, ParseTree] =>
   }
   const [leftChildren, rightChildren] = splitFieldChildrenByAssign(node);
   for (const child of leftChildren) {
-    left.addAnyChild(child)
+    left.addAnyChild(child);
   }
   for (const child of rightChildren) {
-    right.addAnyChild(child)
+    right.addAnyChild(child);
   }
 
   return [left, right];
@@ -210,6 +217,11 @@ const listSeparatorInline = genInlineContext(
   (_, node) => node instanceof ThriftParserNS.List_separatorContext
 );
 
+const fieldSubblocks = genSubblocksContext(
+  3,
+  (n) => n instanceof ThriftParserNS.FieldContext
+);
+
 export class PureThriftFormatter {
   protected _option: Option = newOption();
   protected currentIndent = '';
@@ -268,8 +280,8 @@ export class PureThriftFormatter {
     }
   }
 
-  protected beforeBlockNode(_: ParseTree): void {} // eslint-disable-line
-  protected afterBlockNode(_: ParseTree): void {}  // eslint-disable-line
+  protected beforeBlockNode(_: ParseTree) {} // eslint-disable-line
+  protected afterBlockNode(_: ParseTree) {}  // eslint-disable-line
   protected beforeSubblocks(_: ParseTree[]) {} // eslint-disable-line
   protected afterSubblocks(_: ParseTree[]) {}  // eslint-disable-line
   protected beforeProcessNode(_: ParseTree) {} // eslint-disable-line
@@ -306,7 +318,7 @@ export class PureThriftFormatter {
 
   protected processInlineNodes(nodes: ParseTree[], join = ' ') {
     // eslint-disable-next-line
-    for (let [index, node] of nodes.entries()) {
+    for (const [index, node] of nodes.entries()) {
       if (index > 0) {
         this.append(join);
       }
@@ -457,18 +469,9 @@ export class PureThriftFormatter {
     (n) => n instanceof ThriftParserNS.Enum_fieldContext
   );
   protected Enum_fieldContext: NodeProcessFunc = listSeparatorInline
-  protected Struct_Context: NodeProcessFunc = genSubblocksContext(
-    3,
-    (n) => n instanceof ThriftParserNS.FieldContext
-  );
-  protected Union_Context: NodeProcessFunc = genSubblocksContext(
-    3,
-    (n) => n instanceof ThriftParserNS.FieldContext
-  );
-  protected Exception_Context: NodeProcessFunc = genSubblocksContext(
-    3,
-    (n) => n instanceof ThriftParserNS.FieldContext
-  );
+  protected Struct_Context: NodeProcessFunc = fieldSubblocks
+  protected Union_Context: NodeProcessFunc = fieldSubblocks
+  protected Exception_Context: NodeProcessFunc = fieldSubblocks
   protected FieldContext: NodeProcessFunc = listSeparatorInline
   protected Function_Context: NodeProcessFunc = tupleTightInline
   protected OnewayContext: NodeProcessFunc = genInlineContext();
@@ -517,8 +520,8 @@ const patchFieldRequired = (n: ParseTree): void => {
   }
 
   const fakeToken = new CommonToken(ThriftParser.T__20, 'required');
-  fakeToken.line = -1;
-  fakeToken.charPositionInLine = -1;
+  fakeToken.line = fakeNodeLineNo;
+  fakeToken.charPositionInLine = fakeNodeLineNo;
   fakeToken.tokenIndex = -1;
   const fakeNode = new TerminalNode(fakeToken);
   const fakeReq = new ThriftParserNS.Field_reqContext(n, 0);
@@ -535,6 +538,7 @@ const patchFieldListSeparator = (n: ParseTree): void => {
     || n instanceof ThriftParserNS.Function_Context)) {
     return;
   }
+
   const child = n.getChild(n.childCount - 1);
   if (child instanceof ThriftParserNS.List_separatorContext) {
     const comma = <TerminalNode>child.getChild(0);
@@ -544,8 +548,8 @@ const patchFieldListSeparator = (n: ParseTree): void => {
   }
 
   const fakeToken = new CommonToken(ThriftParser.COMMA, ',');
-  fakeToken.line = -1;
-  fakeToken.charPositionInLine = -1;
+  fakeToken.line = fakeNodeLineNo;
+  fakeToken.charPositionInLine = fakeNodeLineNo;
   fakeToken.tokenIndex = -1;
   const fakeNode = new TerminalNode(fakeToken);
   const fakeCtx = new ThriftParserNS.List_separatorContext(n, 0);
@@ -596,6 +600,7 @@ const calcSubBlocksCommentPadding = (subblocks: ParseTree[]): number => {
     const nodeLength = (new PureThriftFormatter().formatNode(subblock)).length;
     padding = padding >= nodeLength? padding: nodeLength;
   }
+
   if (padding > 0) {
     padding = padding + 1;
   }
@@ -624,7 +629,7 @@ export const calcFieldAlignByAssignPadding = (fields: ParseTree[]): [number, num
 
 const getFieldChildName = (n: ParseTree): string =>  {
   if (isToken(n, '=')) {
-    return '='
+    return '=';
   }
   return n.constructor.name;
 }
@@ -661,11 +666,11 @@ const calcFieldAlignByFieldPaddingMap = (fields: ParseTree[]):[Map<string, numbe
   for (const field of fields) {
     let i = 0;
     for (;i < field.childCount; i++) {
-      const child = field.getChild(i)
-      const level = nameLevels.get(getFieldChildName(child))! // eslint-disable-line
-      const length = new PureThriftFormatter().formatNode(child).length
+      const child = field.getChild(i);
+      const level = nameLevels.get(getFieldChildName(child))!; // eslint-disable-line
+      const length = new PureThriftFormatter().formatNode(child).length;
 
-      levelLength.set(level, Math.max(levelLength.get(level) || 0, length))
+      levelLength.set(level, Math.max(levelLength.get(level) || 0, length));
     }
   }
 
@@ -682,19 +687,19 @@ const calcFieldAlignByFieldPaddingMap = (fields: ParseTree[]):[Map<string, numbe
       padding += levelLength.get(i) || 0;
     }
 
-    levelPadding.set(level, padding)
+    levelPadding.set(level, padding);
   }
 
   for (const [name, level] of nameLevels) {
-    paddingMap.set(name, levelPadding.get(level)!) // eslint-disable-line
+    paddingMap.set(name, levelPadding.get(level)!); // eslint-disable-line
   }
 
-  let commentPadding = levelLength.size
+  let commentPadding = levelLength.size;
   for (const [, length] of levelLength) {
-    commentPadding += length
+    commentPadding += length;
   }
   if (paddingMap.has(getFieldChildName(sep))) {
-    commentPadding -= 1
+    commentPadding -= 1;
   }
 
   return [paddingMap, commentPadding];
@@ -731,21 +736,24 @@ export class ThriftFormatter extends PureThriftFormatter {
     }
   }
 
-  protected beforeSubblocks(subblocks: ParseTree[]) {
+  protected beforeSubblocks(subblocks: ParseTree[]): void {
     if (this._option.alignByField) {
-      const [paddingMap, commentPadding] = calcFieldAlignByFieldPaddingMap(subblocks)
-      paddingMap.forEach((value, key, m) => {m.set(key, this.calcAddIndentPadding(value))})
-      this.fieldAlignByFieldPaddingMap = paddingMap
-      this.fieldCommentPadding = this.calcAddIndentPadding(commentPadding)
+      const [paddingMap, commentPadding] = calcFieldAlignByFieldPaddingMap(subblocks);
+      paddingMap.forEach((value, key, m) => {m.set(key, this.calcAddIndentPadding(value))});
+
+      this.fieldAlignByFieldPaddingMap = paddingMap;
+      this.fieldCommentPadding = this.calcAddIndentPadding(commentPadding);
     } else if (this._option.alignByAssign) {
-      const [alignPadding, commentPadding] = calcFieldAlignByAssignPadding(subblocks)
-      this.fieldAlignByAssignPadding = this.calcAddIndentPadding(alignPadding)
-      this.fieldCommentPadding = this.calcAddIndentPadding(commentPadding)
+      const [alignPadding, commentPadding] = calcFieldAlignByAssignPadding(subblocks);
+
+      this.fieldAlignByAssignPadding = this.calcAddIndentPadding(alignPadding);
+      this.fieldCommentPadding = this.calcAddIndentPadding(commentPadding);
     }
 
     if (this._option.keepComment && this.fieldCommentPadding === 0) {
-      const commentPadding = calcSubBlocksCommentPadding(subblocks)
-      this.fieldCommentPadding = this.calcAddIndentPadding(commentPadding)
+      const commentPadding = calcSubBlocksCommentPadding(subblocks);
+
+      this.fieldCommentPadding = this.calcAddIndentPadding(commentPadding);
     }
   }
 
@@ -775,30 +783,31 @@ export class ThriftFormatter extends PureThriftFormatter {
 
   private calcAddIndentPadding(padding:number) : number {
     if (padding > 0) {
-      padding += this._option.indent
+      padding += this._option.indent;
     }
-    return padding
+    return padding;
   }
 
-  private addAlignPadding(n: ParseTree) {
+  private addAlignPadding(n: ParseTree): void {
     if (!isFieldOrEnumField(n.parent)) {
-      return
+      return;
     }
 
     if (this._option.alignByField && this.fieldAlignByFieldPaddingMap.size > 0) {
-      const name = getFieldChildName(n)
-      const padding = this.fieldAlignByFieldPaddingMap.get(name)
+      const name = getFieldChildName(n);
+      const padding = this.fieldAlignByFieldPaddingMap.get(name);
       if (padding && padding > 0) {
-        this.padding(padding)
+        this.padding(padding);
       }
-      return
+      return;
     }
 
     if (this._option.alignByAssign && isToken(n, '=') ) {
-      this.padding(this.fieldAlignByAssignPadding)
-      return
+      this.padding(this.fieldAlignByAssignPadding);
+      return;
     }
-    return
+
+    return;
   }
 
   private padding(padding: number, pad = ' ') {
@@ -815,8 +824,7 @@ export class ThriftFormatter extends PureThriftFormatter {
       return;
     }
 
-    // fake_token
-    if (node.symbol.line === -1) {
+    if (isFakeNode(node)) {
       return;
     }
 
@@ -870,6 +878,7 @@ export class ThriftFormatter extends PureThriftFormatter {
     if (this.lastTokenIndex === -1) {
       return;
     }
+
     const tokens = this.data.tokens.getTokens();
     const lastToken = tokens[this.lastTokenIndex];
     const comments = [];
@@ -888,6 +897,7 @@ export class ThriftFormatter extends PureThriftFormatter {
       if (comment.text === undefined) {
         return;
       }
+
       // align comment
       if (this.fieldCommentPadding > 0) {
         this.padding(this.fieldCommentPadding, ' ');
