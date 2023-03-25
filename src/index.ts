@@ -68,9 +68,7 @@ const isFieldOrEnumField = (node: ParseTree|undefined): boolean => {
 }
 
 const splitFieldChildrenByAssign = (node: FieldContext):[ParseTree[], ParseTree[]] => {
-  if (node.children === undefined) {
-    return [[] , []];
-  }
+  const children: ParseTree[] = node.children || [];
 
   let i = 0;
   let curLeft = true;
@@ -85,8 +83,9 @@ const splitFieldChildrenByAssign = (node: FieldContext):[ParseTree[], ParseTree[
   if (curLeft) {
     i++;
   }
-  const left = node.children.slice(0, i);
-  const right = node.children.slice(i);
+
+  const left = children.slice(0, i);
+  const right = children.slice(i);
   return [left, right];
 }
 
@@ -146,9 +145,8 @@ export const walkNode = (root: ParseTree, callback: (node: ParseTree) => void) =
   while (stack.length > 0) {
     const node = stack.shift();
     if (node === undefined) {
-      continue
+      break;
     }
-
     callback(node);
     const children = getNodeChildren(node);
     children.forEach(value => stack.push(value))
@@ -255,10 +253,9 @@ export class PureThriftFormatter {
 
   protected newline(repeat = 1) {
     const diff = repeat - this.newlineCounter;
-    if (diff <= 0) {
-      return;
+    if (diff > 0) {
+      this.newlineCounter += diff;
     }
-    this.newlineCounter += diff;
   }
 
   protected setCurrentIndent(indent = '') {
@@ -403,9 +400,7 @@ export class PureThriftFormatter {
     } else if (node instanceof ThriftParserNS.SenumContext) {
       this.SenumContext(node);
     } else {
-      const msg = `Unknown node: ${node}`;
-      // console.log(msg);
-      throw msg;
+      // unsupport node
     }
   }
 
@@ -670,24 +665,24 @@ const calcFieldAlignByFieldPaddingMap = (fields: ParseTree[]):[Map<string, numbe
       const level = nameLevels.get(getFieldChildName(child))! // eslint-disable-line
       const length = new PureThriftFormatter().formatNode(child).length
 
-      levelLength.set(level, Math.max(levelLength.get(level)||0, length))
+      levelLength.set(level, Math.max(levelLength.get(level) || 0, length))
     }
   }
 
   const sep = new ThriftParserNS.List_separatorContext(undefined, 0);
   const levelPadding: Map<number, number> = new Map();
-  for (const [level, _] of levelLength) {
+  for (const [level, ] of levelLength) {
+    let padding = level;
     if (level === nameLevels.get(getFieldChildName(sep))) {
-      levelPadding.set(level, level-1)
-    } else {
-      levelPadding.set(level, level)
+      padding -= 1;
     }
 
     let i = 0;
     for (;i < level; i++) {
-      const padding = levelPadding.get(level)! + levelLength.get(level)! // eslint-disable-line
-      levelPadding.set(level, padding)
+      padding += levelLength.get(i) || 0;
     }
+
+    levelPadding.set(level, padding)
   }
 
   for (const [name, level] of nameLevels) {

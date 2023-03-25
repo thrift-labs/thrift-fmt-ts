@@ -300,6 +300,23 @@ struct Work {
     ELEVLEN
 }`);
     })
+
+    it('check align by assign with no assign', () => {
+        const rawThrift = `struct User {
+            1: required string name, // names
+            2: required i32 id,// ids
+        }`;
+        const data = ThriftData.fromString(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(newOption({alignByAssign: true, indent: 4, keepComment: true}))
+        const out = fmt.format();
+        console.log(out);
+        assert.equal(out.trim(), `
+struct User {
+    1: required string name, // names
+    2: required i32 id,      // ids
+}`.trim());
+    })
 });
 
 describe('test some function', () =>{
@@ -327,5 +344,171 @@ describe('test some function', () =>{
         const rightValue = new PureThriftFormatter().formatNode(right);
         assert.equal(leftValue, `1: i32 num1`)
         assert.equal(rightValue, `= 0,`)
+    })
+})
+
+
+describe('test with align field', () => {
+    it('with struct enum', () => {
+        const rawThrift = `
+       struct Person {
+           1: list<string> tags = ["A"],
+           2: optional list<string> opt_tags = ["1", "2"],
+           3: required list<string> req_tags = [],
+           4: string name = "hello";
+           5: optional string opt_name,
+           16: required string req_name,
+       }`
+        const data = ThriftData.fromString(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(newOption({
+            patchRequired: false,
+            patchSeparator: true,
+            alignByField: true,
+            indent:4,
+            keepComment: true}))
+        const out = fmt.format()
+        console.log(out)
+        assert.equal(out.trim(), `
+struct Person {
+    1:           list<string> tags     = [ "A" ]     ,
+    2:  optional list<string> opt_tags = [ "1", "2" ],
+    3:  required list<string> req_tags = [ ]         ,
+    4:           string       name     = "hello"     ,
+    5:  optional string       opt_name               ,
+    16: required string       req_name               ,
+}
+            `.trim())
+    })
+
+    it('test another simple', ()=> {
+        const rawThrift = `
+        struct Work {
+        1: i32 number_a = 0, // hello
+        2: required i32 num2 = 1,//xyz
+        3: list<i32> num3 = [1, 2, 3],// num3
+        11: string str_b = "hello-world"
+        }`
+        const data = ThriftData.fromString(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(newOption({
+            patchRequired: false,
+            patchSeparator: true,
+            alignByField: true,
+            indent:4,
+            keepComment: true}))
+        const out = fmt.format()
+        console.log(out)
+        assert.equal(out.trim(), `
+struct Work {
+    1:           i32       number_a = 0            , // hello
+    2:  required i32       num2     = 1            , //xyz
+    3:           list<i32> num3     = [ 1, 2, 3 ]  , // num3
+    11:          string    str_b    = "hello-world",
+}
+        `.trim())
+    })
+})
+
+describe('test more case to up coverage', () => {
+    it('with full thrift support', () => {
+        const rawThrift = `/*x
+        y*/
+
+       // hello
+       include "shared.thrift" // hello3
+
+       /*x
+
+        y*/
+
+       # a
+       // b
+       include "shared2.thrift" //a
+
+       // gt
+
+       /*xyz
+       */
+
+       namespace py hello_thrift
+
+       const i32 person_type_default = 1;
+       const list<i32> hello_tags = [1, 2, 3];
+       const map<string, i32> default_users = {"1": 2},
+
+       typedef i32 PersionType
+
+       struct Xtruct2 {
+           1: required i8 byte_thing,       // used to be byte, hence the name
+           2: required Xtruct struct_thing, // b
+           3: required i32 i32_thing,       // a
+           4: map cpp_type "UserPO" <string, i64> users,
+           5: set cpp_type "Name" <string> names,
+       }
+
+       struct CrazyNesting {
+        1: string string_field,
+        2: optional set<Insanity> set_field,
+        // Do not insert line break as test/go/Makefile.am is removing this line with pattern match
+        3: required list<map<set<i32> (python.immutable = ""), map<i32,set<list<map<Insanity,string>(python.immutable = "")> (python.immutable = "")>>>> list_field,
+        4: binary binary_field
+      }
+
+      union SomeUnion {
+        1: map<Numberz, UserId> map_thing,
+        2: string string_thing,
+        3: i32 i32_thing,
+        4: Xtruct3 xtruct_thing,
+        5: Insanity insanity_thing
+      }
+
+      exception Xception {
+        1: i32 errorCode,
+        2: string message
+      }
+
+
+
+       struct Work {
+           1: required i32 num1 = 0,
+           2: required i32 num2,                       // num2 for
+           // 3: required Operation op,                // op is Operation
+           4: optional string comment,
+           5: required map<string, list<string>> tags, //hello
+       }
+
+       struct Person {
+           1: list<string> tags,
+           2: optional list<string> opt_tags = ["1", "2"],
+           3: required list<string> req_tags = [],
+           4: string name = "hello";
+           5: optional string opt_name,
+           6: required string req_name,
+       }
+
+       service HelloService {
+            oneway void testOneway(1:i32 secondsToSleep)
+            Xtruct testMultiException(1: string arg0, 2: string arg1) throws(1: Xception err1, 2: Xception2 err2)
+       }
+       service Hello2Service extends HelloService {
+       }
+
+    enum WEEKDAY {
+        MONDAY,
+        SUNDAY = 2;
+    }
+    senum STRS {
+    } `
+        const data = ThriftData.fromString(rawThrift);
+        const fmt = new ThriftFormatter(data);
+        fmt.option(newOption({
+            patchRequired: true,
+            patchSeparator: true,
+            alignByAssign: false,
+            alignByField: true,
+            indent: 4,
+            keepComment: true}))
+        fmt.format()
     })
 })
