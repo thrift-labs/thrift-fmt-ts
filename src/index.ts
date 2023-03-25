@@ -68,9 +68,7 @@ const isFieldOrEnumField = (node: ParseTree|undefined): boolean => {
 }
 
 const splitFieldChildrenByAssign = (node: FieldContext):[ParseTree[], ParseTree[]] => {
-  if (node.children === undefined) {
-    return [[] , []];
-  }
+  const children: ParseTree[] = node.children || [];
 
   let i = 0;
   let curLeft = true;
@@ -85,8 +83,9 @@ const splitFieldChildrenByAssign = (node: FieldContext):[ParseTree[], ParseTree[
   if (curLeft) {
     i++;
   }
-  const left = node.children.slice(0, i);
-  const right = node.children.slice(i);
+
+  const left = children.slice(0, i);
+  const right = children.slice(i);
   return [left, right];
 }
 
@@ -146,9 +145,8 @@ export const walkNode = (root: ParseTree, callback: (node: ParseTree) => void) =
   while (stack.length > 0) {
     const node = stack.shift();
     if (node === undefined) {
-      continue
+      break;
     }
-
     callback(node);
     const children = getNodeChildren(node);
     children.forEach(value => stack.push(value))
@@ -255,10 +253,9 @@ export class PureThriftFormatter {
 
   protected newline(repeat = 1) {
     const diff = repeat - this.newlineCounter;
-    if (diff <= 0) {
-      return;
+    if (diff > 0) {
+      this.newlineCounter += diff;
     }
-    this.newlineCounter += diff;
   }
 
   protected setCurrentIndent(indent = '') {
@@ -403,9 +400,7 @@ export class PureThriftFormatter {
     } else if (node instanceof ThriftParserNS.SenumContext) {
       this.SenumContext(node);
     } else {
-      const msg = `Unknown node: ${node}`;
-      // console.log(msg);
-      throw msg;
+      // unsupport node
     }
   }
 
