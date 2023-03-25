@@ -671,7 +671,7 @@ const calcFieldAlignByFieldPaddingMap = (fields: ParseTree[]):[Map<string, numbe
 
   const sep = new ThriftParserNS.List_separatorContext(undefined, 0);
   const levelPadding: Map<number, number> = new Map();
-  for (const [level, _] of levelLength) {
+  for (const [level, ] of levelLength) {
     let padding = level;
     if (level === nameLevels.get(getFieldChildName(sep))) {
       padding -= 1;
