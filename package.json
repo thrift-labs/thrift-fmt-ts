@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepare": "npm run build",
     "clean": "rm -rf ./lib/",
     "lint": "eslint .",
     "test": "mocha -r ts-node/register 'test/*.ts'",

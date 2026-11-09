@@ -15,6 +15,7 @@ export interface Option {
   keepComment: boolean,
   alignByAssign: boolean,
   alignByField: boolean,
+  separateBaseFields: boolean,
 }
 
 export const newOption = (opt?: Partial<Option>):Option => {
@@ -25,6 +26,7 @@ export const newOption = (opt?: Partial<Option>):Option => {
     keepComment: true,
     alignByAssign: false,
     alignByField: false,
+    separateBaseFields: false,
   }
   return {
     ...defaultOption,
@@ -72,6 +74,15 @@ const isFieldOrEnumField = (node: ParseTree|undefined): boolean => {
     node instanceof ThriftParserNS.FieldContext ||
     node instanceof ThriftParserNS.Enum_fieldContext
   );
+}
+
+const isBaseField = (node: ParseTree): boolean => {
+  if (!(node instanceof ThriftParserNS.FieldContext)) {
+    return false;
+  }
+  const name = node.IDENTIFIER().text;
+  const type = node.field_type().IDENTIFIER()?.text;
+  return (name === 'Base' || name === 'BaseResp') && type?.split('.').pop() === name;
 }
 
 const splitFieldChildrenByAssign = (node: FieldContext):[ParseTree[], ParseTree[]] => {
@@ -195,7 +206,8 @@ const genSubblocksContext = (start: number, kindFn: IsKindFunc): NodeProcessFunc
     const [subblocks, leftNodes] = splitRepeatNodes(leftChildren, kindFn);
 
     this.beforeSubblocks(subblocks);
-    this.processBlockNodes(subblocks, ' '.repeat(this._option.indent));
+    this.processBlockNodes(subblocks, ' '.repeat(this._option.indent),
+      this._option.separateBaseFields && node instanceof ThriftParserNS.Struct_Context);
     this.afterSubblocks(subblocks);
 
     this.newline();
@@ -287,7 +299,7 @@ export class PureThriftFormatter {
   protected beforeProcessNode(_: ParseTree) {} // eslint-disable-line
   protected afterProcessNode(_: ParseTree) {}  // eslint-disable-line
 
-  protected processBlockNodes(nodes: ParseTree[], indent = '') {
+  protected processBlockNodes(nodes: ParseTree[], indent = '', separateBaseFields = false) {
     let lastNode: ParseTree | undefined = undefined;
     // eslint-disable-next-line
     for (let [index, node] of nodes.entries()) {
@@ -301,7 +313,8 @@ export class PureThriftFormatter {
       this.beforeBlockNode(node)
 
       if (index > 0 && lastNode !== undefined) {
-        if (notSameClass(lastNode, node)|| isNeedNewLineNode(node)) {
+        if (notSameClass(lastNode, node)|| isNeedNewLineNode(node)
+          || (separateBaseFields && isBaseField(node))) {
           this.newline(2);
         } else {
           this.newline();
@@ -713,6 +726,7 @@ export class ThriftFormatter extends PureThriftFormatter {
   private fieldAlignByAssignPadding = 0;
   private fieldAlignByFieldPaddingMap: Map<string, number> = new Map();
   private lastTokenIndex = -1;
+  private baseFieldStart = -1;
 
   constructor(data: ThriftData) {
     super();
@@ -763,8 +777,15 @@ export class ThriftFormatter extends PureThriftFormatter {
     this.fieldCommentPadding = 0;
   }
 
+  protected beforeBlockNode(node: ParseTree): void {
+    this.baseFieldStart = this._option.separateBaseFields && isBaseField(node)
+      && node.parent instanceof ThriftParserNS.Struct_Context
+      ? (node as ThriftParserNS.FieldContext).start.tokenIndex : -1;
+  }
+
   protected afterBlockNode(_: ParseTree): void {
     this.addTailComment();
+    this.baseFieldStart = -1;
   }
 
   protected beforeProcessNode(n: ParseTree): void {
@@ -840,8 +861,9 @@ export class ThriftFormatter extends PureThriftFormatter {
       }
     }
 
+    const baseFieldComments = tokenIndex === this.baseFieldStart;
     for (const token of comments) {
-      if (token.tokenIndex > 0 && token.type == ThriftParser.ML_COMMENT) {
+      if (token.tokenIndex > 0 && token.type == ThriftParser.ML_COMMENT && !baseFieldComments) {
         this.newline(2);
       }
       if (token.text === undefined) {
@@ -857,6 +879,7 @@ export class ThriftFormatter extends PureThriftFormatter {
       const lastLine = token.line + text.split('\n').length - 1;
       const lineDiff = node.symbol.line - lastLine;
       const isTight =
+        baseFieldComments ||
         token.type == ThriftParser.SL_COMMENT ||
         isEOF(node) ||
         (0 < lineDiff && lineDiff <= 1);
